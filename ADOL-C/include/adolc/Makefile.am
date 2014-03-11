@@ -18,7 +18,7 @@ pkginclude_HEADERS   = adolc.h adalloc.h adouble.h adutils.h adutilsc.h \
                        revolve.h advector.h adolc_settings.h \
                        adtl.h adoublecuda.h
 
-SUBDIRS = drivers tapedoc
+SUBDIRS = drivers tapedoc hessian
 
 EXTRA_DIST = adolc_settings.h.in
 
