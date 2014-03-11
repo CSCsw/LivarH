@@ -1,0 +1,653 @@
+extern double *edge_value;
+extern int *edge_index;
+extern int edge_value_len;
+extern int edge_index_len;
+extern int edge_is_local;
+extern int max_active;
+
+#ifdef ASYSMMETRIC_MATRIX
+#ifdef NO_PRE_ACC
+void edge_pushing_a(short tnum, map<int,map<int,double> > *graph){
+#endif
+#ifdef PRE_ACC
+void edge_pushing_pre_a(short tnum, map<int,map<int,double> > *graph){
+#endif
+  increase_edge=&increase_edge_a;
+#endif
+#ifdef SYSMMETRIC_MATRIX
+#ifdef NO_PRE_ACC
+void edge_pushing_s(short tnum, map<int,map<int,double> > *graph){
+#endif
+#ifdef PRE_ACC
+void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
+#endif
+  increase_edge=&increase_edge_s;
+#endif
+  unsigned char operation;
+  derivative_info* info=new derivative_info();
+  map<int, double> *Adjoints= new map<int, double>;
+#ifdef PRE_ACC
+  map<int, double> *lAdjoints= new map<int, double>;
+  map<int, map<int, double> > *lGraph=new map<int, map<int, double> >;
+  derivative_info* dinfo=new derivative_info();
+  dinfo->r=NULLLOC;dinfo->x=NULLLOC;dinfo->y=NULLLOC;
+  dinfo->dx=0.0;dinfo->dy=0.0;
+  dinfo->px=0.0;dinfo->py=0.0;dinfo->pxy=0.0;
+  int *dp= new int[max_active];
+  int dl=0;
+  int r;
+#endif
+
+  size_t i,j;
+  int p;
+  double w;
+  double vx,vy,vr,vc;
+  size_t tl;
+  int *tp= new int[max_active];
+  double *tw=new double[max_active];
+  map<int, double> *edges;
+  init_rev_sweep(tnum);
+  operation=get_op_r();
+
+
+  while (operation != start_of_tape) { 
+    info->opcode=operation;
+    info->r=NULLLOC;info->x=NULLLOC;info->y=NULLLOC;
+    info->dx=0.0;info->dy=0.0;
+    info->px=0.0;info->py=0.0;info->pxy=0.0;
+    switch (operation){
+                /************************************************************/
+                /*                                                  MARKERS */
+                /*----------------------------------------------------------*/
+            case end_of_op:                                    /* end_of_op */
+                get_op_block_r();
+                operation = get_op_r();
+                /* Skip next operation, it's another end_of_op */
+                break;
+            case start_of_tape:                            /* start_of_tape */
+            case end_of_tape:                                /* end_of_tape */
+                break;
+                /************************************************************/
+                /*                                               COMPARISON */
+                /*----------------------------------------------------------*/
+            case eq_zero  :                                      /* eq_zero */
+            case neq_zero :                                     /* neq_zero */
+            case gt_zero  :                                      /* gt_zero */
+            case lt_zero :                                       /* lt_zero */
+            case ge_zero :                                       /* ge_zero */
+            case le_zero :                                       /* le_zero */
+	    case neq_a_a:
+	    case eq_a_a:
+	    case le_a_a:
+	    case ge_a_a:
+	    case lt_a_a:
+	    case gt_a_a:
+                break;
+                /************************************************************/
+                /*                                              ASSIGNMENTS */
+            case assign_a:     /* assign an adouble variable an    assign_a */
+                /* adouble value. (=) */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=1.0;
+		edge_value_len-=2;
+		break;
+	    
+            case assign_d:      /* assign an adouble variable a    assign_d */
+                /* double value. (=) */
+		info->r=edge_index[--edge_index_len];
+		edge_value_len-=1;
+		break;
+            case assign_d_zero: /* assign an adouble a        assign_d_zero */
+            case assign_d_one:  /* double value. (=)           assign_d_one */
+		info->r=edge_index[--edge_index_len];
+		edge_value_len-=1;
+		break;
+
+            case assign_ind:       /* assign an adouble variable an    assign_ind */
+                /* independent double value (<<=) */
+		edge_index_len-=1;
+		edge_value_len-=1;
+		break;
+	
+            case assign_dep:           /* assign a float variable a    assign_dep */
+                /* dependent adouble value. (>>=) */
+		(*Adjoints)[edge_index[--edge_index_len]]=1.0;
+		edge_value_len-=1;
+		break;
+
+            /****************************************************************************/
+            /*                                                   OPERATION + ASSIGNMENT */
+
+            /*--------------------------------------------------------------------------*/
+            case eq_plus_d:            /* Add a floating point to an    eq_plus_d */
+		/* adouble. (+=) */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=1.0;
+		edge_value_len-=2;
+		break;
+
+            case eq_plus_a:             /* Add an adouble to another    eq_plus_a */
+                /* adouble. (+=) */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=1.0;info->dy=1.0;
+		edge_value_len-=3;
+		break;
+
+            case eq_min_d:       /* Subtract a floating point from an    eq_min_d */
+                /* adouble. (-=) */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=1.0;
+		edge_value_len-=2;
+		break;
+
+            case eq_min_a:        /* Subtract an adouble from another    eq_min_a */
+                /* adouble. (-=) */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=1.0;info->dy=-1.0;
+		edge_value_len-=3;
+		break;
+
+            case eq_mult_d:              /* Multiply an adouble by a    eq_mult_d */
+                /* flaoting point. (*=) */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=edge_value[--edge_index_len];
+		edge_value_len-=3;
+		break;
+
+            case eq_mult_a:       /* Multiply one adouble by another    eq_mult_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=edge_value[edge_index_len];
+		info->dy=edge_value[edge_index_len+1];
+		info->pxy=1.0;
+		edge_value_len-=3;
+		break;
+            case eq_plus_prod:   /* increment a product of           eq_plus_prod */
+                /* two adoubles (*) */
+#ifdef NO_PRE_ACC
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=1.0;info->dy=1.0;
+		compute_pushing(tl,tp,tw,info,graph);
+		compute_adjoints(info,Adjoints);
+		info->r=info->y;
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=edge_value[edge_index_len];
+		info->dy=edge_value[edge_index_len+1];
+		info->pxy=1.0;
+#endif
+
+#ifdef PRE_ACC
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=1.0;dinfo->dy=1.0;
+		info->r=info->y;
+
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=edge_value[edge_index_len];
+		info->dy=edge_value[edge_index_len+1];
+		info->pxy=1.0;
+#endif
+
+		edge_value_len-=5;
+		break;
+            case eq_min_prod:   /* decrement a product of             eq_min_prod */
+                /* two adoubles (*) */
+#ifdef NO_PRE_ACC
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=1.0;info->dy=-1.0;
+		compute_pushing(tl,tp,tw,info,graph);
+		compute_adjoints(info,Adjoints);
+
+		info->r=info->y;
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=edge_value[edge_index_len];
+		info->dy=edge_value[edge_index_len+1];
+		info->pxy=1.0;
+		edge_value_len-=5;
+#endif
+#ifdef PRE_ACC
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=1.0;info->dy=-1.0;
+
+		info->r=info->y;
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=edge_value[edge_index_len];
+		info->dy=edge_value[edge_index_len+1];
+		info->pxy=1.0;
+		edge_value_len-=5;
+#endif
+		break;
+
+                /*--------------------------------------------------------------------------*/
+            case incr_a:                        /* Increment an adouble    incr_a */
+            case decr_a:                        /* Increment an adouble    decr_a */
+		break;
+
+                /****************************************************************************/
+                /*                                                        BINARY OPERATIONS */
+                /*--------------------------------------------------------------------------*/
+            case plus_a_a:                 /* : Add two adoubles. (+)    plus a_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=1.0;
+		info->dy=1.0;
+		edge_value_len-=3;
+		break;
+
+            case plus_d_a:             /* Add an adouble and a double    plus_d_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=1.0;
+		edge_value_len-=2;
+		break;
+
+            case min_a_a:              /* Subtraction of two adoubles    min_a_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=-1.0;
+		info->dy=1.0;
+		edge_value_len-=3;
+		break;
+
+            case min_d_a:                /* Subtract an adouble from a    min_d_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=-1.0;
+		edge_value_len-=2;
+		break;
+
+            case mult_a_a:               /* Multiply two adoubles (*)    mult_a_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->dx=edge_value[edge_index_len];
+		info->dy=edge_value[edge_index_len+1];
+		info->pxy=1.0;
+		edge_value_len-=3;
+		break;
+
+            case mult_d_a:         /* Multiply an adouble by a double    mult_d_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=edge_value[--edge_index_len];
+		edge_value_len-=3;
+		break;
+
+            case div_a_a:           /* Divide an adouble by an adouble    div_a_a */
+		info->r=edge_index[--edge_index_len];
+		info->y=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vy=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=1.0/vy;
+		info->dy=-vx/(vy*vy);
+		info->py=2.0*vx/(vy*vy*vy);
+		info->pxy=-1.0/(vy*vy);
+		break;
+            case div_d_a:             /* Division double - adouble (/)    div_d_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		edge_index_len-=1;
+		vr=edge_value[--edge_value_len];
+		vy=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=-vx/(vy*vy);
+		info->px=2.0*vx/(vy*vy*vy);
+		break;
+
+                /****************************************************************************/
+                /*                                                         SIGN  OPERATIONS */
+                /*--------------------------------------------------------------------------*/
+            case pos_sign_a:                                        /* pos_sign_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=1.0;
+		edge_value_len-=2;
+		break;
+		
+            case neg_sign_a:                                        /* neg_sign_a */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		info->dx=-1.0;
+		edge_value_len-=2;
+		break;
+
+                /****************************************************************************/
+                /*                                                         UNARY OPERATIONS */
+                /*--------------------------------------------------------------------------*/
+            case exp_op:                          /* exponent operation    exp_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		info->dx=vr;
+		info->px=vr;
+		edge_value_len-=1;
+		break;
+
+            case sin_op:                              /* sine operation    sin_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=cos(vx);
+		info->px=-vr;
+		break;
+
+            case cos_op:                            /* cosine operation    cos_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=-sin(vx);
+		info->px=-vr;
+		break;
+
+            case atan_op:                                            /* atanh_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=1.0/(1.0+vx*vx);
+		info->px=-(2.0*vx)/((1.0+vx*vx)*(1.0+vx*vx));
+		break;
+            case asin_op:                                              /* asin_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=1.0/sqrt(1.0-vx*vx);
+		info->px=vx/((sqrt(1.0-vx*vx))*(1.0-vx*vx));
+		break;
+            case acos_op:                                              /* asin_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=-1.0/sqrt(1.0-vx*vx);
+		info->px=-vx/((sqrt(1.0-vx*vx))*(1.0-vx*vx));
+		break;
+
+            case asinh_op:                                            /* asinh_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=1.0/sqrt(1.0+vx*vx);
+		info->px=-vx*info->dx/(1.0+vx*vx);
+                break;
+            case acosh_op:                                            /* acosh_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+printf("vx=%0.10f\n",vx);
+		info->dx=1.0/sqrt(vx*vx-1.0);
+		info->px=-vx*info->dx/(vx*vx-1.0);
+		break;
+            case atanh_op:                                            /* atanh_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=1/(1-vx*vx);
+		info->px=2.0*vx*info->dx*info->dx;
+		break;
+            case erf_op:                                              /* erf_op   */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=2.0/sqrt(acos(-1.0))*exp(-vx*vx);
+		info->px=-2.0*vx*info->dx;
+		break;
+
+            case log_op:                                                /* log_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		info->dx=1.0/vx;
+		info->px=-1.0/(vx*vx);
+		break;
+
+            case pow_op:                                                /* pow_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		edge_index_len-=1;
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		vc=edge_value[--edge_value_len];
+		if (vx==0.0){
+		  info->dx=0.0;info->px=0.0;
+		}
+		else{
+		  info->dx=vc*(vr/vx);
+		  info->px=(vc-1.0)*(info->dx/vx);
+		}
+		break;
+
+            case sqrt_op:                                              /* sqrt_op */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		if (vx==0.0){
+		  info->dx=0.0;info->px=0.0;
+		}
+		else{
+		  info->dx=0.5*(vr/vx);
+		  info->px=-0.5*(info->dx/vx);
+		}
+		break;
+
+            case min_op:                                                /* min_op */
+		info->r=edge_index[--edge_index_len];
+		edge_index_len-=2;
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		vy=edge_value[--edge_value_len];
+		if (vx>vy){
+		  info->x=edge_index[edge_value_len];
+		  info->dx=1.0;
+		}
+		else if(vx<vy){
+		  info->x=edge_index[edge_value_len+1];
+		  info->dx=1.0;
+		}
+		else{  //tie here, what to do?
+		  fprintf(stderr,"WARNING: Tie in min_op\n");
+		}
+		break;
+            case abs_val:                                              /* abs_val */
+		info->r=edge_index[--edge_index_len];
+		info->x=edge_index[--edge_index_len];
+		vr=edge_value[--edge_value_len];
+		vx=edge_value[--edge_value_len];
+		if (vx>0.0){
+		  info->dx=1.0;
+		}
+		else if(vx<0.0){
+		  info->dx=-1.0;
+		}
+		else{
+		  fprintf(stderr,"WARNING: 0 in abs_val\n");
+		}
+		break;
+                /*                                                             CONDITIONALS */
+                /*--------------------------------------------------------------------------*/
+            case cond_assign:                                      /* cond_assign */
+		edge_value_len-=4;
+		vc=edge_value[edge_value_len];
+printf("cond_assign vc=%0.10f\n",vc);
+		if (vc>0.0){
+		  info->r=edge_index[--edge_index_len];
+		  edge_index_len-=1;
+		  info->x=edge_index[--edge_index_len];
+		  edge_index_len-=1;
+		}
+		else{
+		  info->r=edge_index[--edge_index_len];
+		  info->x=edge_index[--edge_index_len];
+		  edge_index_len-=2;
+		}
+		info->dx=1.0;
+		break;
+
+            case cond_assign_s:                                  /* cond_assign_s */
+		edge_value_len-=3;
+		vc=edge_value[edge_value_len];
+		if (vc>0.0){
+		  info->r=edge_index[--edge_index_len];
+		  info->x=edge_index[--edge_index_len];
+		  info->dx=1.0;
+		  edge_index_len-=1;
+		}
+		break;
+	    case death_not:
+	    case gen_quad:
+	    case end_of_int:
+	    case end_of_val:
+	    case take_stock_op:
+	    case ceil_op:
+	    case floor_op:
+	    case ext_diff:
+	    case ext_diff_iArr:
+		break;
+	    default:
+                /* Die here, we screwed up */
+                fprintf(DIAG_OUT,"EDGE_HESSIAN error: Fatal error in tape_doc for op %d\n",
+                        operation);
+                break;
+ 
+      }//switch
+#ifdef NO_PRE_ACC
+    if (info->r!=NULLLOC){
+	edge_check_info(info);
+//pushing
+	    compute_pushing(tl,tp,tw,info,graph);
+//creating
+	    compute_creating(info,Adjoints,graph);
+//adjointing
+	    compute_adjoints(info,Adjoints);
+    }
+#endif
+
+#ifdef PRE_ACC
+    edge_check_info(info);
+    switch (info->opcode){
+      case assign_dep:
+        dl=0;
+	break;
+      case assign_ind:
+	break;
+      case assign_d:
+      case assign_d_one:
+      case assign_d_zero:
+        dp[dl++]=info->r;
+        break;
+      case assign_a:
+      case eq_plus_a:
+      case eq_plus_d:
+      case eq_min_a:
+      case eq_min_d:
+      case eq_mult_d:
+      case eq_mult_a:
+      case eq_plus_prod:
+      case eq_min_prod:
+//push previous result to Global Trace
+	edge_is_local=1;
+edge_check_graph(lGraph);
+	compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
+	compute_global_creating(r,lGraph,Adjoints,graph);
+	compute_global_adjoints(r,lAdjoints,Adjoints);
+        for(i=0;i<dl;i++){
+	  dinfo->r=dp[i];
+	  compute_pushing(tl,tp,tw,dinfo,graph);
+	  compute_adjoints(dinfo,Adjoints);
+        }
+	dl=0;
+        edge_is_local=0;
+	delete lAdjoints;
+	delete lGraph;
+        lAdjoints=new map<int, double>;
+        lGraph=new map<int, map<int, double> >;
+	if ((info->opcode==eq_plus_prod)||(info->opcode==eq_min_prod)){
+	  dinfo->r=edge_index[edge_index_len+4];
+	  dinfo->x=edge_index[edge_index_len+3];
+	  dinfo->y=edge_index[edge_index_len+2];
+	  dinfo->dx=1.0;
+	  if (info->opcode==eq_plus_prod){
+	    dinfo->dy=1.0;
+	  }
+	  else{
+	    dinfo->dy=-1.0;
+	  }
+          (*lAdjoints)[dinfo->r]=1.0;
+	  r=dinfo->r;
+	  compute_adjoints(dinfo,lAdjoints);
+	  dinfo->dx=0.0;dinfo->dy=0.0;
+	  dinfo->x=NULLLOC;dinfo->y=NULLLOC;
+	}
+	else{
+          (*lAdjoints)[info->r]=1.0;
+	  r=info->r;
+	}
+	break;
+//begin another;
+      }//switch
+        if (info->r!=NULLLOC){
+//pushing
+	    compute_pushing(tl,tp,tw,info,lGraph);
+//creating
+	    compute_creating(info,lAdjoints,lGraph);
+//adjointing
+	    compute_adjoints(info,lAdjoints);
+        }
+#endif
+    operation=get_op_r();
+  }//while
+#ifdef PRE_ACC
+      edge_is_local=1;
+edge_check_graph(lGraph);
+      compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
+      compute_global_creating(r,lGraph,Adjoints,graph);
+      compute_global_adjoints(r,lAdjoints,Adjoints);
+      for(i=0;i<dl;i++){
+	dinfo->r=dp[i];
+	compute_pushing(tl,tp,tw,dinfo,graph);
+	compute_adjoints(dinfo,Adjoints);
+      }
+      dl=0;
+      edge_is_local=0;
+#endif
+  end_sweep();
+  delete info;
+  delete Adjoints;
+  delete[] tp;
+  delete[] tw;
+}
+
+

@@ -1,0 +1,1311 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include "oplate.h"
+#include <adolc/adalloc.h>
+#include <adolc/interfaces.h>
+#include "taping_p.h"
+#include <adolc/hessian/edge_main.h>
+#include <adolc/hessian/edge_check.h>
+
+//#define BUG_TEST
+
+using namespace std;
+
+extern int edge_op_cnt;
+extern int edge_tape_size;
+extern double *edge_value;
+extern int *edge_index;
+extern int edge_value_len;
+extern int edge_index_len;
+extern int max_active;
+extern int edge_translate_flag;
+int edge_t_new_len;
+int edge_t_old_len;
+int *edge_t_index;
+int edge_t_cur_index;
+#define EDGE_TRANSLATE_INDEX	if (edge_translate_flag==1){		\
+					edge_t_new_len=edge_value_len-1; 	\
+					translate_tape();		\
+					edge_t_old_len=edge_value_len;		\
+				}
+
+
+#define EDGE_TRANSLATE_INDEPENDENT	if (edge_translate_flag==1){	\
+						edge_t_new_len=edge_value_len-1;	\
+						edge_t_index[edge_index[edge_t_new_len]]=edge_t_cur_index;\
+						edge_index[edge_t_new_len]=edge_t_cur_index;	\
+						indmap[edge_t_cur_index]=indexi++;	\
+						edge_t_cur_index++;			\
+						edge_t_old_len=edge_value_len;	\
+					}					\
+					else{					\
+						indmap[res]=indexi++;		\
+					}
+#define EDGE_TRANSLATE_DEPENDENT	if (edge_translate_flag==1){	\
+						edge_t_new_len=edge_value_len-1;	\
+						edge_index[edge_t_new_len]=edge_t_index[edge_index[edge_t_new_len]];\
+					}
+
+	
+void translate_tape(){
+  int i;
+  for(i=edge_t_old_len;i<edge_t_new_len;i++){
+    edge_index[i]=edge_t_index[edge_index[i]];
+  }
+  edge_t_index[edge_index[edge_t_new_len]]=edge_t_cur_index;
+  edge_index[edge_t_new_len]=edge_t_cur_index;
+  edge_t_cur_index++;
+}
+
+int edge_tape(short tnum,         /* tape id */
+              int depcheck,       /* consistency chk on # of dependents */
+              int indcheck,       /* consistency chk on # of independents */
+              const double *basepoint, /* independent variable values */
+              vector<derivative_info*> *tape_info,  /* derivative info on the tape */
+              unsigned int** indmapp)      /* Mapping from location to independent index */
+{
+   short tag;
+   int ret_val=1;
+   int max_tmp;
+//   printf("This is where everything begins...\n");
+   derivative_info *info;
+    unsigned char operation;
+    unsigned int* indmap;
+
+    locint size = 0;
+    locint res  = 0;
+    locint arg  = 0;
+    locint arg1 = 0;
+    locint arg2 = 0;
+
+    double coval = 0, *d = 0;
+
+    int indexi = 0, indexd = 0;
+
+    /* loop indices */
+    int  l;
+
+    /* Taylor stuff */
+    double *dp_T0;
+
+    /* interface temporaries */
+    int loc_a[4];
+
+    /****************************************************************************/
+    /*                                                                    INITs */
+
+    init_for_sweep(tnum);
+    tag = tnum;
+
+    if ((depcheck != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS]) ||
+            (indcheck != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) ) {
+        fprintf(DIAG_OUT,"ADOL-C error: Tape_doc on tape %d  aborted!\n",tag);
+        fprintf(DIAG_OUT,"Number of dependent (%d) and/or independent (%d) "
+                "variables passed to Tape_doc is\ninconsistent with "
+                "number recorded on tape %d (%d:%d)\n", depcheck,
+                indcheck, tag, (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS],
+                (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]);
+        exit (-1);
+    }
+    int rev_op_cnt=0;
+    edge_tape_size=0;
+    edge_op_cnt=0;
+    operation=get_op_f();
+    while (operation !=end_of_tape) {
+      switch (operation){
+            case end_of_op:                                          /* end_of_op */
+                get_op_block_f();
+                operation=get_op_f();
+		break;
+            case assign_d:            /* assign an adouble variable a    assign_d */
+            case assign_d_one:    /* assign an adouble variable a    assign_d_one */
+            case assign_d_zero:  /* assign an adouble variable a    assign_d_zero */
+            case assign_ind:       /* assign an adouble variable an    assign_ind */
+            case assign_dep:           /* assign a float variable a    assign_dep */
+	    case neq_a_a:
+	    case eq_a_a:
+	    case le_a_a:
+	    case ge_a_a:
+	    case lt_a_a:
+	    case gt_a_a:
+		edge_tape_size+=1;
+		edge_op_cnt++;
+		break;
+            case assign_a:           /* assign an adouble variable an    assign_a */
+            case eq_plus_d:            /* Add a floating point to an    eq_plus_d */
+            case eq_min_d:       /* Subtract a floating point from an    eq_min_d */
+            case plus_d_a:             /* Add an adouble and a double    plus_d_a */
+            case min_d_a:                /* Subtract an adouble from a    min_d_a */
+            case pos_sign_a:                                        /* pos_sign_a */
+            case neg_sign_a:                                        /* neg_sign_a */
+            case exp_op:                          /* exponent operation    exp_op */
+            case log_op:                                                /* log_op */
+            case sqrt_op:                                              /* sqrt_op */
+            case sin_op:                              /* sine operation    sin_op */
+            case cos_op:                            /* cosine operation    cos_op */
+            case atan_op:                                              /* atan_op */
+            case asin_op:                                              /* asin_op */
+            case acos_op:                                              /* acos_op */
+            case abs_val:                                              /* abs_val */
+	    case asinh_op:                                            /* asinh_op */	
+	    case acosh_op:                                            /* acosh_op */
+	    case atanh_op:                                            /* atanh_op */
+	    case erf_op:                                                /* erf_op */
+		edge_tape_size+=2;
+		edge_op_cnt++;
+		break;
+            case eq_plus_a:             /* Add an adouble to another    eq_plus_a */
+            case eq_min_a:        /* Subtract an adouble from another    eq_min_a */
+            case eq_mult_d:              /* Multiply an adouble by a    eq_mult_d */
+            case eq_mult_a:       /* Multiply one adouble by another    eq_mult_a */
+            case plus_a_a:                 /* : Add two adoubles. (+)    plus a_a */
+            case min_a_a:              /* Subtraction of two adoubles     min_a_a */
+            case mult_a_a:               /* Multiply two adoubles (*)    mult_a_a */
+            case mult_d_a:         /* Multiply an adouble by a double    mult_d_a */
+            case div_a_a:           /* Divide an adouble by an adouble    div_a_a */
+            case div_d_a:             /* Division double - adouble (/)    div_d_a */
+            case pow_op:                                                /* pow_op */
+            case min_op:                                                /* min_op */
+            case cond_assign_s:                                  /* cond_assign_s */
+		edge_tape_size+=3;
+		edge_op_cnt++;
+		break;
+            case cond_assign:                                      /* cond_assign */
+		edge_tape_size+=4;
+		edge_op_cnt++;
+		break;
+            case eq_plus_prod:    /* Add an product to an            eq_plus_prod */
+            case eq_min_prod:     /* Subtract an product from an      eq_min_prod */
+		edge_tape_size+=5;
+		edge_op_cnt+=2;
+		break;
+	    case subscript_ref:
+	    case ref_incr_a:
+	    case ref_decr_a:
+	    case ref_eq_plus_d:
+	    case ref_eq_min_d:
+		edge_op_cnt++;
+		break;
+	    case ref_assign_ind:
+		edge_tape_size++;
+		edge_op_cnt++;
+		break;
+	    case subscript:
+	    case ref_assign_d:
+	    case ref_assign_d_zero:
+	    case ref_assign_d_one:
+	    case ref_assign_a:
+		edge_tape_size+=2;
+		edge_op_cnt++;
+		break;
+	    case ref_eq_plus_a:
+	    case ref_eq_min_a:
+	    case ref_eq_mult_d:
+	    case ref_eq_mult_a:
+		edge_tape_size+=3;
+		edge_op_cnt++;
+		break;
+	    case ref_copyout:
+		edge_tape_size+=2;
+		edge_op_cnt++;
+		break;
+	    case ref_cond_assign:
+		edge_tape_size+=4;
+		edge_op_cnt++;
+		break;
+	    case ref_cond_assign_s:
+		edge_tape_size+=3;
+		edge_op_cnt++;
+		break;
+	    default:
+		edge_op_cnt++;
+		break;
+      }
+      operation=get_op_f();
+    }
+    end_sweep();
+    printf("edge_tape_size=[%d]\n",edge_tape_size);
+    fflush(stdout);
+    max_tmp=edge_tape_size+1;
+    edge_tape_size+=10;
+    int i;
+    (*indmapp)=new unsigned int[edge_tape_size];
+    indmap=*indmapp;
+    for(i=0;i<edge_tape_size;i++){indmap[i]=0;}
+
+    if (edge_translate_flag==1){
+      edge_t_old_len=0;edge_t_new_len=0;edge_t_cur_index=0;
+      edge_t_index=new int[edge_tape_size];
+      for(i=0;i<edge_tape_size;i++){edge_t_index[i]=0;}
+    }
+    /* globals */
+
+//    edge_tape_size=ADOLC_CURRENT_TAPE_INFOS.stats[NUM_OPERATIONS]+ADOLC_CURRENT_TAPE_INFOS.stats[NUM_EQ_PROD]+10;
+
+//    tape_info->reserve(edge_tape_size);
+    max_active=edge_op_cnt;
+    edge_value=new double[edge_tape_size];
+    edge_index=new int[edge_tape_size];
+    edge_value_len=0;
+    edge_index_len=0;
+
+
+    init_for_sweep(tnum);
+    dp_T0 = myalloc1(ADOLC_CURRENT_TAPE_INFOS.stats[NUM_MAX_LIVES]);
+    operation=get_op_f();
+    while (operation !=end_of_tape) {
+        switch (operation) {
+                /****************************************************************************/
+                /*                                                                  MARKERS */
+
+                /*--------------------------------------------------------------------------*/
+            case end_of_op:                                          /* end_of_op */
+                get_op_block_f();
+                operation=get_op_f();
+                /* Skip next operation, it's another end_of_op */
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case end_of_int:                                        /* end_of_int */
+                get_loc_block_f();
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case end_of_val:                                        /* end_of_val */
+                get_val_block_f();
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case start_of_tape:                                  /* start_of_tape */
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case end_of_tape:                                      /* end_of_tape */
+                break;
+
+
+                /****************************************************************************/
+                /*                                                               COMPARISON */
+                /*--------------------------------------------------------------------------*/
+//Also No Check Here. May need Retape
+//TO DO
+            case eq_zero  :                                            /* eq_zero */
+            case neq_zero :                                           /* neq_zero */
+            case le_zero  :                                            /* le_zero */
+            case gt_zero  :                                            /* gt_zero */
+            case ge_zero  :                                            /* ge_zero */
+            case lt_zero  :                                            /* lt_zero */
+                arg  = get_locint_f();
+                break;
+
+
+                /****************************************************************************/
+                /*                                                              ASSIGNMENTS */
+
+                /*--------------------------------------------------------------------------*/
+            case assign_a:           /* assign an adouble variable an    assign_a */
+                /* adouble value. (=) */
+                arg = get_locint_f();
+                res = get_locint_f();
+                dp_T0[res]= dp_T0[arg];
+		edge_index[edge_index_len++]=arg;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case assign_d:            /* assign an adouble variable a    assign_d */
+                /* double value. (=) */
+                res  = get_locint_f();
+                coval=get_val_f();
+                dp_T0[res]= coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case assign_d_one:    /* assign an adouble variable a    assign_d_one */
+                /* double value. (1) (=) */
+                res  = get_locint_f();
+
+                dp_T0[res]= 1.0;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case assign_d_zero:  /* assign an adouble variable a    assign_d_zero */
+                /* double value. (0) (=) */
+                res  = get_locint_f();
+
+                dp_T0[res]= 0.0;
+
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case assign_ind:       /* assign an adouble variable an    assign_ind */
+                /* independent double value (<<=) */
+                res  = get_locint_f();
+
+                dp_T0[res]= basepoint[indexi];
+
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEPENDENT
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case assign_dep:           /* assign a float variable a    assign_dep */
+                /* dependent adouble value. (>>=) */
+                res = get_locint_f();
+
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_DEPENDENT
+                break;
+
+
+                /****************************************************************************/
+                /*                                                   OPERATION + ASSIGNMENT */
+
+                /*--------------------------------------------------------------------------*/
+            case eq_plus_d:            /* Add a floating point to an    eq_plus_d */
+                /* adouble. (+=) */
+                res   = get_locint_f();
+                coval = get_val_f();
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+                dp_T0[res] += coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case eq_plus_a:             /* Add an adouble to another    eq_plus_a */
+                /* adouble. (+=) */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+                dp_T0[res]+= dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case eq_plus_prod:    /* Add an product to an            eq_plus_prod */
+                /* adouble. (+= x1*x2) */
+                arg1 = get_locint_f();
+                arg2 = get_locint_f();
+                res  = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		edge_index[edge_index_len++]=arg2;
+		edge_value[edge_value_len++]=dp_T0[arg2];
+		edge_index[edge_index_len++]=max_tmp;
+		edge_value[edge_value_len++]=dp_T0[arg1]*dp_T0[arg2];
+		EDGE_TRANSLATE_INDEX
+
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+                dp_T0[res] += dp_T0[arg1]*dp_T0[arg2];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case eq_min_d:       /* Subtract a floating point from an    eq_min_d */
+                /* adouble. (-=) */
+                res   = get_locint_f();
+                coval = get_val_f();
+
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+                dp_T0[res] -= coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case eq_min_a:        /* Subtract an adouble from another    eq_min_a */
+                /* adouble. (-=) */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+                dp_T0[res]-= dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case eq_min_prod:     /* Subtract an product from an      eq_min_prod */
+                /* adouble. (-= x1*x2) */
+                arg1 = get_locint_f();
+                arg2 = get_locint_f();
+                res  = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		edge_index[edge_index_len++]=arg2;
+		edge_value[edge_value_len++]=dp_T0[arg2];
+		edge_index[edge_index_len++]=max_tmp;
+		edge_value[edge_value_len++]=dp_T0[arg1]*dp_T0[arg2];
+		EDGE_TRANSLATE_INDEX
+
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+                dp_T0[res] -= dp_T0[arg1]*dp_T0[arg2];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case eq_mult_d:              /* Multiply an adouble by a    eq_mult_d */
+                /* flaoting point. (*=) */
+                res   = get_locint_f();
+                coval = get_val_f();
+
+		edge_index[edge_index_len++]=NULLLOC;
+		edge_value[edge_value_len++]=coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+                dp_T0[res] *= coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case eq_mult_a:       /* Multiply one adouble by another    eq_mult_a */
+                /* (*=) */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+                dp_T0[res]*= dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+                /*--------------------------------------------------------------------------*/
+            case incr_a:                        /* Increment an adouble    incr_a */
+                res = get_locint_f();
+//Should do nothing... Is that right?
+
+                dp_T0[res]++;
+
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case decr_a:                        /* Increment an adouble    decr_a */
+                res = get_locint_f();
+//Should do nothing... Is that right?
+
+                dp_T0[res]--;
+
+                break;
+
+
+                /****************************************************************************/
+                /*                                                        BINARY OPERATIONS */
+                /*--------------------------------------------------------------------------*/
+            case plus_a_a:                 /* : Add two adoubles. (+)    plus a_a */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		edge_index[edge_index_len++]=arg2;
+		edge_value[edge_value_len++]=dp_T0[arg2];
+                dp_T0[res]=dp_T0[arg1]+dp_T0[arg2];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case plus_d_a:             /* Add an adouble and a double    plus_d_a */
+                /* (+) */
+                arg   = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]= dp_T0[arg] + coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case min_a_a:              /* Subtraction of two adoubles     min_a_a */
+                /* (-) */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		edge_index[edge_index_len++]=arg2;
+		edge_value[edge_value_len++]=dp_T0[arg2];
+                dp_T0[res]=dp_T0[arg1]-dp_T0[arg2];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case min_d_a:                /* Subtract an adouble from a    min_d_a */
+                /* double (-) */
+                arg   = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]  = coval - dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case mult_a_a:               /* Multiply two adoubles (*)    mult_a_a */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		edge_index[edge_index_len++]=arg2;
+		edge_value[edge_value_len++]=dp_T0[arg2];
+                dp_T0[res]=dp_T0[arg1]*dp_T0[arg2];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case mult_d_a:         /* Multiply an adouble by a double    mult_d_a */
+                /* (*) */
+                arg   = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+
+		edge_index[edge_index_len++]=NULLLOC;
+		edge_value[edge_value_len++]=coval;
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]  = coval * dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case div_a_a:           /* Divide an adouble by an adouble    div_a_a */
+                /* (/) */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		edge_index[edge_index_len++]=arg2;
+		edge_value[edge_value_len++]=dp_T0[arg2];
+                dp_T0[res]=dp_T0[arg1]/dp_T0[arg2];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case div_d_a:             /* Division double - adouble (/)    div_d_a */
+                arg   = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+
+		edge_index[edge_index_len++]=NULLLOC;
+		edge_value[edge_value_len++]=coval;
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]  = coval / dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+
+                /****************************************************************************/
+                /*                                                         SIGN  OPERATIONS */
+                /*--------------------------------------------------------------------------*/
+            case pos_sign_a:                                        /* pos_sign_a */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]= dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case neg_sign_a:                                        /* neg_sign_a */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]= -dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /****************************************************************************/
+                /*                                                         UNARY OPERATIONS */
+
+                /*--------------------------------------------------------------------------*/
+            case exp_op:                          /* exponent operation    exp_op */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]= exp(dp_T0[arg]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case log_op:                                                /* log_op */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]= log(dp_T0[arg]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case pow_op:                                                /* pow_op */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+                coval   = get_val_f();
+
+		edge_index[edge_index_len++]=NULLLOC;
+		edge_value[edge_value_len++]=coval;
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res] = pow(dp_T0[arg],coval);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case sqrt_op:                                              /* sqrt_op */
+                arg  = get_locint_f();
+                res  = get_locint_f();
+
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]= sqrt(dp_T0[arg]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+
+                /*--------------------------------------------------------------------------*/
+            case sin_op:                              /* sine operation    sin_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+                dp_T0[arg2]= cos(dp_T0[arg1]);
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = sin(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case cos_op:                            /* cosine operation    cos_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+                dp_T0[arg2]= sin(dp_T0[arg1]);
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = cos(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case atan_op:                                              /* atan_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = atan(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case asin_op:                                              /* asin_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = asin(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case acos_op:                                              /* acos_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = acos(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+#ifdef ATRIG_ERF
+
+                /*--------------------------------------------------------------------------*/
+            case asinh_op:                                            /* asinh_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = asinh(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case acosh_op:                                           /* acosh_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = acosh(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case atanh_op:                                            /* atanh_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = atanh(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case erf_op:                                                /* erf_op */
+                arg1 = get_locint_f();
+                arg2 = get_locint_f();
+                res  = get_locint_f();
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                dp_T0[res] = erf(dp_T0[arg1]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+                break;
+
+#endif
+
+#ifdef ADOLC_ADVANCED_BRANCHING
+//We do not check the consistancy here
+//Different inputs would destroy the consistancy! Retape is needed!
+//TO DO: 
+	    case neq_a_a:
+	    case eq_a_a:
+	    case le_a_a:
+	    case ge_a_a:
+	    case lt_a_a:
+	    case gt_a_a:
+		coval =	get_val_f();
+		arg   = get_locint_f();
+		arg1  = get_locint_f();
+		res   = get_locint_f();
+		dp_T0[res]=coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+		break;
+#endif
+
+                /*--------------------------------------------------------------------------*/
+            case min_op:                                                /* min_op */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		edge_index[edge_index_len++]=arg2;
+		edge_value[edge_value_len++]=dp_T0[arg2];
+                if (dp_T0[arg1] > dp_T0[arg2])
+                    dp_T0[res] = dp_T0[arg2];
+                else
+                    dp_T0[res] = dp_T0[arg1];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case abs_val:                                              /* abs_val */
+                arg   = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+                dp_T0[res]  = fabs(dp_T0[arg]);
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case ceil_op:                                              /* ceil_op */
+                arg   = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+                dp_T0[res]  = ceil(dp_T0[arg]);
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case floor_op:                 /* Compute ceil of adouble    floor_op */
+                arg   = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+                dp_T0[res]  = floor(dp_T0[arg]);
+                break;
+
+
+                /****************************************************************************/
+                /*                                                             CONDITIONALS */
+
+                /*--------------------------------------------------------------------------*/
+            case cond_assign:                                      /* cond_assign */
+                arg   = get_locint_f();
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		edge_index[edge_index_len++]=arg2;
+		edge_value[edge_value_len++]=dp_T0[arg2];
+
+                if (dp_T0[arg]>0)
+                    dp_T0[res]=dp_T0[arg1];
+                else
+                    dp_T0[res]=dp_T0[arg2];
+
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+
+
+                /*--------------------------------------------------------------------------*/
+            case cond_assign_s:                                  /* cond_assign_s */
+                arg   = get_locint_f();
+                arg1  = get_locint_f();
+                res   = get_locint_f();
+                coval = get_val_f();
+
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+                if (dp_T0[arg]>0)
+                    dp_T0[res]=dp_T0[arg1];
+
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+
+		EDGE_TRANSLATE_INDEX
+                break;
+/*
+advector ops
+Probably buggy :(
+*/
+	    case subscript:                                             /*   advector[adouble]  */
+		coval = get_val_f();
+		arg   = get_locint_f();
+		res   = get_locint_f();
+		arg1  = get_locint_f();
+		{
+		  locint idx,numvar=(locint)trunc(fabs(coval));
+		  idx=dp_T0[arg];
+		  if (idx>=numvar){
+		    fprintf(DIAG_OUT, "ADOL-C warning: index out of bounds while subscripting n=%z, idx=%z\n", numvar, idx); 
+		  }
+		  arg1=arg1+idx;
+		  edge_index[edge_index_len++]=arg1;
+		  edge_value[edge_value_len++]=dp_T0[arg1];
+		  dp_T0[res]=dp_T0[arg1];
+		  edge_index[edge_index_len++]=res;
+		  edge_value[edge_value_len++]=dp_T0[res];
+		  EDGE_TRANSLATE_INDEX
+		}
+		break;
+
+	    case subscript_ref:						/* &advector[adouble]  */
+		coval = get_val_f();
+		arg   = get_locint_f();
+		res   = get_locint_f();
+		arg1  = get_locint_f();
+		{
+		  locint idx,numvar=(locint)trunc(fabs(coval));
+		  idx=dp_T0[arg];
+		  if (idx>=numvar){
+		    fprintf(DIAG_OUT, "ADOL-C warning: index out of bounds while subscripting n=%z, idx=%z\n", numvar, idx); 
+		  }
+		  arg1=arg1+idx;
+		  dp_T0[res]=arg1;
+		}
+		break;
+	    case ref_assign_d_zero:
+		arg = get_locint_f();
+		arg1=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[arg1]=0.0;
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=0.0;
+		EDGE_TRANSLATE_INDEX;
+		break;
+
+	    case ref_assign_d_one:
+		arg = get_locint_f();
+		arg1=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[arg1]=1.0;
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=1.0;
+		EDGE_TRANSLATE_INDEX
+		break;
+		
+	    case ref_assign_d:
+		coval = get_val_f();
+		arg = get_locint_f();
+		arg1=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[arg1]=coval;
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=coval;
+		EDGE_TRANSLATE_INDEX
+		break;
+	    case ref_assign_a:
+		arg = get_locint_f();
+		res = get_locint_f();
+		arg1=(locint)trunc(fabs(dp_T0[res]));
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		dp_T0[arg1]=dp_T0[arg];
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		EDGE_TRANSLATE_INDEX
+		break;
+	    case ref_assign_ind:
+		arg = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[res]=basepoint[indexi];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEPENDENT
+		break;
+	    case ref_incr_a:
+		arg = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[res]++;
+		break;
+	    case ref_decr_a:
+		arg = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[res]--;
+		break;
+	    case ref_eq_plus_d:
+		coval=get_val_f();
+		arg = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[res]+=coval;
+		break;
+	    case ref_eq_min_d:
+		coval=get_val_f();
+		arg = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[res]-=coval;
+		break;
+	    case ref_eq_plus_a:
+		arg = get_locint_f();
+		arg1 = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg1]));
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		dp_T0[res]+=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+		break;
+	    case ref_eq_min_a:
+		arg = get_locint_f();
+		arg1 = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg1]));
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		dp_T0[res]-=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+		break;
+	    case ref_eq_mult_d:
+		coval = get_val_f();
+		arg  = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		edge_index[edge_index_len++]=NULLLOC;
+		edge_value[edge_value_len++]=coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		dp_T0[res]*=coval;
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+		break;
+		
+	    case ref_eq_mult_a:
+		arg = get_locint_f();
+		arg1 = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg1]));
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		dp_T0[res]*=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+		break;		
+	    case ref_copyout:
+		arg = get_locint_f();
+		arg1 = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg1]));
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		dp_T0[res]=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+		break;		
+//Store both the cond.loc and the value of that?
+//What if they are inconsistant? Retape?
+	    case ref_cond_assign:
+		arg = get_locint_f();
+		arg1 = get_locint_f();
+		arg2 = get_locint_f();
+		coval= get_val_f();
+		{
+		  locint ref = get_locint_f();
+		  res=(locint)trunc(fabs(dp_T0[ref]));
+		  edge_index[edge_index_len++]=arg;
+		  edge_value[edge_value_len++]=dp_T0[arg];
+		  edge_index[edge_index_len++]=arg1;
+		  edge_value[edge_value_len++]=dp_T0[arg1];
+		  edge_index[edge_index_len++]=arg2;
+		  edge_value[edge_value_len++]=dp_T0[arg2];
+		  if (dp_T0[arg]>0.0){
+		    if (coval<=0.0){
+		      fprintf(DIAG_OUT,"Inconsistancy in ref_cond_assign, Retape?\n");
+		    }
+		    dp_T0[res]=dp_T0[arg1];
+		  }
+		  else{
+		    if (coval>0.0){
+		      fprintf(DIAG_OUT,"Inconsistancy in ref_cond_assign, Retape?\n");
+		    }
+		    dp_T0[res]=dp_T0[arg2];
+		  }
+		  edge_index[edge_index_len++]=res;
+		  edge_value[edge_value_len++]=dp_T0[res];
+		}
+		EDGE_TRANSLATE_INDEX
+		break;
+	    case ref_cond_assign_s:
+		arg = get_locint_f();
+		arg1 = get_locint_f();
+		arg2 = get_locint_f();
+		coval = get_val_f();
+		res=(locint)trunc(fabs(dp_T0[arg2]));
+		edge_index[edge_index_len++]=arg;
+		edge_value[edge_value_len++]=dp_T0[arg];
+		edge_index[edge_index_len++]=arg1;;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		if (dp_T0[arg]>0.0){
+		  if (coval<=0.0){
+		    fprintf(DIAG_OUT, "Inconsistancy in ref_cond_assign_s, Retape?\n");
+		  }
+		  dp_T0[res]=dp_T0[arg1];
+		}
+		edge_index[edge_index_len++]=res;
+		edge_index[edge_value_len++]=dp_T0[res];
+		EDGE_TRANSLATE_INDEX
+		break;
+
+                /****************************************************************************/
+                /*                                                          REMAINING STUFF */
+                /*--------------------------------------------------------------------------*/
+            case take_stock_op:                                  /* take_stock_op */
+                size = get_locint_f();
+                res  = get_locint_f();
+                d    = get_val_v_f(size);
+                for (l=0; l<size; l++)
+                    dp_T0[res+l] = d[l];
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case death_not:                                          /* death_not */
+                arg1 = get_locint_f();
+                arg2 = get_locint_f();
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case gen_quad:                                            /* gen_quad */
+                arg1  = get_locint_f();
+                arg2  = get_locint_f();
+                res   = get_locint_f();
+		coval = get_val_f();
+		if (coval!=dp_T0[arg1]){
+		  fprintf(DIAG_OUT,"ADOL-C Warning: forward sweep aborted; tape invalid!\n");
+		}
+		coval = get_val_f();
+		NOT_IMPLEMENTED_YET
+                break;
+
+                /****************************************************************************/
+            case ext_diff:
+                get_locint_f(); 
+                get_locint_f(); 
+                get_locint_f(); 
+                get_locint_f(); 
+                get_locint_f(); 
+                get_locint_f();
+		NOT_IMPLEMENTED_YET;
+                break;
+
+            case ignore_me:
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            default:                                                   /* default */
+                /* Die here, we screwed up */
+                fprintf(DIAG_OUT,"ADOL-C(Edge Pushing) error: Fatal error in tape_doc for op %d\n",operation);
+                break;
+
+        } /* endswitch */
+        /* Read the next operation */
+        operation=get_op_f();
+    }  /* endwhile */
+
+    free(dp_T0);
+    dp_T0 = NULL;
+    end_sweep();
+printf("edge_value_len=%d\n",edge_value_len);
+    if (edge_translate_flag==1){
+//      edge_check_index(edge_index,edge_index_len);
+      delete[] edge_t_index;
+    }
+  return 1;
+}
+
+
