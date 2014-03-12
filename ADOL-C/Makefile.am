@@ -46,6 +46,7 @@ if SPARSE
 lib@adolclib@_la_LIBADD   += src/sparse/libsparse.la
 endif
 
+lib@adolclib@_la_LIBADD   += src/hessian/libhessian.la
 CC = $(saveCC)
 CXX = $(saveCXX)
 
