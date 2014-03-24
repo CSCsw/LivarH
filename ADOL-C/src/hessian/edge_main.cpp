@@ -62,7 +62,6 @@ int edge_hess(
   edge_translate_flag=options[1];
   edge_tape(tag,dep,indep,basepoint,tape_info,&indmap);
 //Step 2: edge pushing
-  cout<<"size of tape="<<tape_info->size()<<endl;
   local_inc_edge_count=0;
   global_inc_edge_count=0;
   edge_is_local=0;

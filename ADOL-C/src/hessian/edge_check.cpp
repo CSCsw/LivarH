@@ -7,7 +7,7 @@
 //#define PRINT_CHECK_PRE
 //#define PRINT_CHECK_EDGES
 //#define PRINT_CHECK_GRAPH
-//#define PRINT_CHECK_INFO
+#define PRINT_CHECK_INFO
 //#define PRINT_CHECK_TAPE
 //#define PRINT_CHECK_ADJOINTS
 //#define PRINT_CHECK_INDEX

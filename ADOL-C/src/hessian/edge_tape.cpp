@@ -25,8 +25,9 @@ int edge_t_old_len;
 int *edge_t_index;
 int edge_t_cur_index;
 #define EDGE_TRANSLATE_INDEX	if (edge_translate_flag==1){		\
+printf("???");\
 					edge_t_new_len=edge_value_len-1; 	\
-					translate_tape();		\
+					if (edge_t_new_len>=edge_t_old_len) {translate_tape();}		\
 					edge_t_old_len=edge_value_len;		\
 				}
 
@@ -133,8 +134,6 @@ int edge_tape(short tnum,         /* tape id */
 		edge_op_cnt++;
 		break;
             case assign_a:           /* assign an adouble variable an    assign_a */
-            case eq_plus_d:            /* Add a floating point to an    eq_plus_d */
-            case eq_min_d:       /* Subtract a floating point from an    eq_min_d */
             case plus_d_a:             /* Add an adouble and a double    plus_d_a */
             case min_d_a:                /* Subtract an adouble from a    min_d_a */
             case pos_sign_a:                                        /* pos_sign_a */
@@ -382,11 +381,7 @@ int edge_tape(short tnum,         /* tape id */
                 /* adouble. (+=) */
                 res   = get_locint_f();
                 coval = get_val_f();
-		edge_index[edge_index_len++]=res;
-		edge_value[edge_value_len++]=dp_T0[res];
                 dp_T0[res] += coval;
-		edge_index[edge_index_len++]=res;
-		edge_value[edge_value_len++]=dp_T0[res];
 		EDGE_TRANSLATE_INDEX
                 break;
 
@@ -433,12 +428,7 @@ int edge_tape(short tnum,         /* tape id */
                 /* adouble. (-=) */
                 res   = get_locint_f();
                 coval = get_val_f();
-
-		edge_index[edge_index_len++]=res;
-		edge_value[edge_value_len++]=dp_T0[res];
                 dp_T0[res] -= coval;
-		edge_index[edge_index_len++]=res;
-		edge_value[edge_value_len++]=dp_T0[res];
 		EDGE_TRANSLATE_INDEX
                 break;
 
@@ -985,11 +975,18 @@ int edge_tape(short tnum,         /* tape id */
 		edge_index[edge_index_len++]=arg2;
 		edge_value[edge_value_len++]=dp_T0[arg2];
 
-                if (dp_T0[arg]>0)
-                    dp_T0[res]=dp_T0[arg1];
-                else
-                    dp_T0[res]=dp_T0[arg2];
-
+                if (dp_T0[arg]>0){
+		  if (coval<=0){
+		    fprintf(DIAG_OUT,"Inconsistency in cond_assign. Retape?\n");
+		  }
+                  dp_T0[res]=dp_T0[arg1];
+		}
+                else{
+		  if (coval>0){
+		    fprintf(DIAG_OUT,"Inconsistency in cond_assign. Retape?\n");
+		  }
+                  dp_T0[res]=dp_T0[arg2];
+		}
 		edge_index[edge_index_len++]=res;
 		edge_value[edge_value_len++]=dp_T0[res];
 
@@ -1008,8 +1005,12 @@ int edge_tape(short tnum,         /* tape id */
 		edge_value[edge_value_len++]=dp_T0[arg];
 		edge_index[edge_index_len++]=arg1;
 		edge_value[edge_value_len++]=dp_T0[arg1];
-                if (dp_T0[arg]>0)
-                    dp_T0[res]=dp_T0[arg1];
+                if (dp_T0[arg]>0) {
+		  if (coval<=0){
+		    fprintf(DIAG_OUT,"Inconsistency in cond_assign_s. Retape?\n");
+		  }
+                  dp_T0[res]=dp_T0[arg1];
+		}
 
 		edge_index[edge_index_len++]=res;
 		edge_value[edge_value_len++]=dp_T0[res];
@@ -1020,6 +1021,9 @@ int edge_tape(short tnum,         /* tape id */
 advector ops
 Probably buggy :(
 */
+	    // advector[adouble] as r-value
+	    // In the constructor of advector(n), the locations are ensured to be contiguous
+	    // The implementation is copying it out via something like assign_a
 	    case subscript:                                             /*   advector[adouble]  */
 		coval = get_val_f();
 		arg   = get_locint_f();
@@ -1041,6 +1045,10 @@ Probably buggy :(
 		}
 		break;
 
+	    // advector[adouble] as l-value?
+	    // return adubref
+	    // afterwards, dp_T0[res] stores the location it references to
+	    // then other ref_* op read it
 	    case subscript_ref:						/* &advector[adouble]  */
 		coval = get_val_f();
 		arg   = get_locint_f();
@@ -1058,18 +1066,18 @@ Probably buggy :(
 		break;
 	    case ref_assign_d_zero:
 		arg = get_locint_f();
-		arg1=(locint)trunc(fabs(dp_T0[arg]));
-		dp_T0[arg1]=0.0;
-		edge_index[edge_index_len++]=arg1;
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[res]=0.0;
+		edge_index[edge_index_len++]=res;
 		edge_value[edge_value_len++]=0.0;
 		EDGE_TRANSLATE_INDEX;
 		break;
 
 	    case ref_assign_d_one:
 		arg = get_locint_f();
-		arg1=(locint)trunc(fabs(dp_T0[arg]));
-		dp_T0[arg1]=1.0;
-		edge_index[edge_index_len++]=arg1;
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[res]=1.0;
+		edge_index[edge_index_len++]=res;
 		edge_value[edge_value_len++]=1.0;
 		EDGE_TRANSLATE_INDEX
 		break;
@@ -1077,21 +1085,21 @@ Probably buggy :(
 	    case ref_assign_d:
 		coval = get_val_f();
 		arg = get_locint_f();
-		arg1=(locint)trunc(fabs(dp_T0[arg]));
-		dp_T0[arg1]=coval;
-		edge_index[edge_index_len++]=arg1;
+		res=(locint)trunc(fabs(dp_T0[arg]));
+		dp_T0[res]=coval;
+		edge_index[edge_index_len++]=res;
 		edge_value[edge_value_len++]=coval;
 		EDGE_TRANSLATE_INDEX
 		break;
 	    case ref_assign_a:
 		arg = get_locint_f();
-		res = get_locint_f();
-		arg1=(locint)trunc(fabs(dp_T0[res]));
+		arg1 = get_locint_f();
+		res=(locint)trunc(fabs(dp_T0[arg1]));
 		edge_index[edge_index_len++]=arg;
 		edge_value[edge_value_len++]=dp_T0[arg];
-		dp_T0[arg1]=dp_T0[arg];
-		edge_index[edge_index_len++]=arg1;
-		edge_value[edge_value_len++]=dp_T0[arg1];
+		dp_T0[res]=dp_T0[arg];
+		edge_index[edge_index_len++]=res;
+		edge_value[edge_value_len++]=dp_T0[res];
 		EDGE_TRANSLATE_INDEX
 		break;
 	    case ref_assign_ind:
@@ -1177,13 +1185,15 @@ Probably buggy :(
 		edge_value[edge_value_len++]=dp_T0[res];
 		EDGE_TRANSLATE_INDEX
 		break;		
+            //works like assign_a
+	    //(adub)advector[adouble]?
 	    case ref_copyout:
 		arg = get_locint_f();
-		arg1 = get_locint_f();
-		res=(locint)trunc(fabs(dp_T0[arg1]));
-		edge_index[edge_index_len++]=arg;
-		edge_value[edge_value_len++]=dp_T0[arg];
-		dp_T0[res]=dp_T0[arg];
+		res = get_locint_f();
+		arg1=(locint)trunc(fabs(dp_T0[arg]));
+		edge_index[edge_index_len++]=arg1;
+		edge_value[edge_value_len++]=dp_T0[arg1];
+		dp_T0[res]=dp_T0[arg1];
 		edge_index[edge_index_len++]=res;
 		edge_value[edge_value_len++]=dp_T0[res];
 		EDGE_TRANSLATE_INDEX
@@ -1204,7 +1214,8 @@ Probably buggy :(
 		  edge_value[edge_value_len++]=dp_T0[arg1];
 		  edge_index[edge_index_len++]=arg2;
 		  edge_value[edge_value_len++]=dp_T0[arg2];
-		  if (dp_T0[arg]>0.0){
+printf("coval=%f,arg1=%d,arg2=%d,res=%d\n",dp_T0[arg],arg1,arg2,res);
+	  	  if (dp_T0[arg]>0.0){
 		    if (coval<=0.0){
 		      fprintf(DIAG_OUT,"Inconsistancy in ref_cond_assign, Retape?\n");
 		    }
@@ -1220,6 +1231,7 @@ Probably buggy :(
 		  edge_value[edge_value_len++]=dp_T0[res];
 		}
 		EDGE_TRANSLATE_INDEX
+printf("%d,%d,%d,%d\n",edge_index[edge_index_len-1],edge_index[edge_index_len-2],edge_index[edge_index_len-3],edge_index[edge_index_len-4]);
 		break;
 	    case ref_cond_assign_s:
 		arg = get_locint_f();
@@ -1227,6 +1239,7 @@ Probably buggy :(
 		arg2 = get_locint_f();
 		coval = get_val_f();
 		res=(locint)trunc(fabs(dp_T0[arg2]));
+printf("coval=%f,arg1=%d,res=%d\n",dp_T0[arg],arg1,res);
 		edge_index[edge_index_len++]=arg;
 		edge_value[edge_value_len++]=dp_T0[arg];
 		edge_index[edge_index_len++]=arg1;;
@@ -1238,8 +1251,9 @@ Probably buggy :(
 		  dp_T0[res]=dp_T0[arg1];
 		}
 		edge_index[edge_index_len++]=res;
-		edge_index[edge_value_len++]=dp_T0[res];
+		edge_value[edge_value_len++]=dp_T0[res];
 		EDGE_TRANSLATE_INDEX
+printf("%d,%d,%d\n",edge_index[edge_index_len-1],edge_index[edge_index_len-2],edge_index[edge_index_len-3]);
 		break;
 
                 /****************************************************************************/

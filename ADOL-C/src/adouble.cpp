@@ -377,12 +377,33 @@ badouble& badouble::operator = ( const adub& a ) {
 /*--------------------------------------------------------------------------*/
 /* Assign an adouble an adub */
 /* olvo 980517 new version griewank */
+
 adouble& adouble::operator = ( const adub& a ) {
     this->loc();  // call for late init
     (*this).badouble::operator=(a);
     return (*this);
 }
 
+
+//Mu Wang: I need assignments to be explict in preaccumulation
+/*
+adouble& adouble::operator = ( const adub& a ) {
+    locint a_loc = a.loc();
+    ADOLC_OPENMP_THREAD_NUMBER;
+    ADOLC_OPENMP_GET_THREAD_NUMBER;
+    if (ADOLC_CURRENT_TAPE_INFOS.traceFlag) {
+        put_op(assign_a);
+        ADOLC_PUT_LOCINT(a_loc);      // = arg
+        ADOLC_PUT_LOCINT(location);   // = res
+        ++ADOLC_CURRENT_TAPE_INFOS.numTays_Tape;
+        if (ADOLC_CURRENT_TAPE_INFOS.keepTaylors) {
+            ADOLC_WRITE_SCAYLOR(ADOLC_GLOBAL_TAPE_VARS.store[location]);
+        }
+    }
+    ADOLC_GLOBAL_TAPE_VARS.store[location]=ADOLC_GLOBAL_TAPE_VARS.store[a_loc];
+    return *this;
+}
+*/
 
 /****************************************************************************/
 /*                                                           INPUT / OUTPUT */
@@ -1577,7 +1598,7 @@ adub acosh ( const badouble& x ) {
     ADOLC_OPENMP_GET_THREAD_NUMBER;
     locint locat = next_loc();
 
-    adouble y = 1.0 / sqrt(1.0 - x*x);
+    adouble y = 1.0 / sqrt(x*x - 1.0);
 
     if (ADOLC_CURRENT_TAPE_INFOS.traceFlag) { // old: write_quad(acosh_op,locat,x.loc(),y.loc());
         put_op(acosh_op);

@@ -85,6 +85,9 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
                 break;
                 /************************************************************/
                 /*                                              ASSIGNMENTS */
+	    case subscript:
+	    case ref_copyout:
+	    case ref_assign_a:
             case assign_a:     /* assign an adouble variable an    assign_a */
                 /* adouble value. (=) */
 		info->r=edge_index[--edge_index_len];
@@ -93,17 +96,17 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
 		edge_value_len-=2;
 		break;
 	    
+	    case ref_assign_d_zero:
+	    case ref_assign_d_one:
+	    case ref_assign_d:
             case assign_d:      /* assign an adouble variable a    assign_d */
-                /* double value. (=) */
-		info->r=edge_index[--edge_index_len];
-		edge_value_len-=1;
-		break;
             case assign_d_zero: /* assign an adouble a        assign_d_zero */
             case assign_d_one:  /* double value. (=)           assign_d_one */
 		info->r=edge_index[--edge_index_len];
 		edge_value_len-=1;
 		break;
 
+	    case ref_assign_ind:
             case assign_ind:       /* assign an adouble variable an    assign_ind */
                 /* independent double value (<<=) */
 		edge_index_len-=1;
@@ -118,16 +121,13 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
 
             /****************************************************************************/
             /*                                                   OPERATION + ASSIGNMENT */
-
             /*--------------------------------------------------------------------------*/
-            case eq_plus_d:            /* Add a floating point to an    eq_plus_d */
+            case ref_eq_plus_d:
+	    case eq_plus_d:            /* Add a floating point to an    eq_plus_d */
 		/* adouble. (+=) */
-		info->r=edge_index[--edge_index_len];
-		info->x=edge_index[--edge_index_len];
-		info->dx=1.0;
-		edge_value_len-=2;
 		break;
 
+	    case ref_eq_plus_a:
             case eq_plus_a:             /* Add an adouble to another    eq_plus_a */
                 /* adouble. (+=) */
 		info->r=edge_index[--edge_index_len];
@@ -137,14 +137,12 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
 		edge_value_len-=3;
 		break;
 
+	    case ref_eq_min_d:
             case eq_min_d:       /* Subtract a floating point from an    eq_min_d */
                 /* adouble. (-=) */
-		info->r=edge_index[--edge_index_len];
-		info->x=edge_index[--edge_index_len];
-		info->dx=1.0;
-		edge_value_len-=2;
 		break;
 
+	    case ref_eq_min_a:
             case eq_min_a:        /* Subtract an adouble from another    eq_min_a */
                 /* adouble. (-=) */
 		info->r=edge_index[--edge_index_len];
@@ -154,6 +152,7 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
 		edge_value_len-=3;
 		break;
 
+	    case ref_eq_mult_d:
             case eq_mult_d:              /* Multiply an adouble by a    eq_mult_d */
                 /* flaoting point. (*=) */
 		info->r=edge_index[--edge_index_len];
@@ -162,6 +161,7 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
 		edge_value_len-=3;
 		break;
 
+	    case ref_eq_mult_a:
             case eq_mult_a:       /* Multiply one adouble by another    eq_mult_a */
 		info->r=edge_index[--edge_index_len];
 		info->x=edge_index[--edge_index_len];
@@ -222,6 +222,7 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
 		info->pxy=1.0;
 		edge_value_len-=5;
 #endif
+
 #ifdef PRE_ACC
 		info->r=edge_index[--edge_index_len];
 		info->x=edge_index[--edge_index_len];
@@ -239,7 +240,9 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
 		break;
 
                 /*--------------------------------------------------------------------------*/
-            case incr_a:                        /* Increment an adouble    incr_a */
+            case ref_incr_a:
+	    case ref_decr_a:
+	    case incr_a:                        /* Increment an adouble    incr_a */
             case decr_a:                        /* Increment an adouble    decr_a */
 		break;
 
@@ -403,7 +406,6 @@ void edge_pushing_pre_s(short tnum, map<int,map<int,double> > *graph){
 		info->x=edge_index[--edge_index_len];
 		vr=edge_value[--edge_value_len];
 		vx=edge_value[--edge_value_len];
-printf("vx=%0.10f\n",vx);
 		info->dx=1.0/sqrt(vx*vx-1.0);
 		info->px=-vx*info->dx/(vx*vx-1.0);
 		break;
@@ -478,7 +480,7 @@ printf("vx=%0.10f\n",vx);
 		  info->dx=1.0;
 		}
 		else{  //tie here, what to do?
-		  fprintf(stderr,"WARNING: Tie in min_op\n");
+		  fprintf(DIAG_OUT,"WARNING: Tie in min_op\n");
 		}
 		break;
             case abs_val:                                              /* abs_val */
@@ -493,15 +495,16 @@ printf("vx=%0.10f\n",vx);
 		  info->dx=-1.0;
 		}
 		else{
-		  fprintf(stderr,"WARNING: 0 in abs_val\n");
+		  fprintf(DIAG_OUT,"WARNING: 0 in abs_val\n");
 		}
 		break;
                 /*                                                             CONDITIONALS */
                 /*--------------------------------------------------------------------------*/
+	    case ref_cond_assign:
             case cond_assign:                                      /* cond_assign */
 		edge_value_len-=4;
+printf("cond_assign: %d,%d,%d,%d\n",edge_index[edge_index_len-1],edge_index[edge_index_len-2],edge_index[edge_index_len-3],edge_index[edge_index_len-4]);
 		vc=edge_value[edge_value_len];
-printf("cond_assign vc=%0.10f\n",vc);
 		if (vc>0.0){
 		  info->r=edge_index[--edge_index_len];
 		  edge_index_len-=1;
@@ -516,6 +519,7 @@ printf("cond_assign vc=%0.10f\n",vc);
 		info->dx=1.0;
 		break;
 
+	    case ref_cond_assign_s:
             case cond_assign_s:                                  /* cond_assign_s */
 		edge_value_len-=3;
 		vc=edge_value[edge_value_len];
@@ -526,6 +530,8 @@ printf("cond_assign vc=%0.10f\n",vc);
 		  edge_index_len-=1;
 		}
 		break;
+
+	    case subscript_ref:
 	    case death_not:
 	    case gen_quad:
 	    case end_of_int:
@@ -552,6 +558,7 @@ printf("cond_assign vc=%0.10f\n",vc);
 	    compute_creating(info,Adjoints,graph);
 //adjointing
 	    compute_adjoints(info,Adjoints);
+	edge_check_graph(graph);
     }
 #endif
 
@@ -561,22 +568,34 @@ printf("cond_assign vc=%0.10f\n",vc);
       case assign_dep:
         dl=0;
 	break;
+      case ref_assign_ind:
       case assign_ind:
 	break;
+      case ref_assign_d:
+      case ref_assign_d_one:
+      case ref_assign_d_zero:
       case assign_d:
       case assign_d_one:
       case assign_d_zero:
         dp[dl++]=info->r;
         break;
+      case ref_assign_a:
+      case ref_eq_plus_a:
+      case ref_eq_min_a:
+      case ref_eq_mult_d:
+      case ref_eq_mult_a:
+      case ref_copyout:
+      case ref_cond_assign:
+      case ref_cond_assign_s:
       case assign_a:
       case eq_plus_a:
-      case eq_plus_d:
       case eq_min_a:
-      case eq_min_d:
       case eq_mult_d:
       case eq_mult_a:
       case eq_plus_prod:
       case eq_min_prod:
+      case cond_assign:
+      case cond_assign_s:
 //push previous result to Global Trace
 	edge_is_local=1;
 edge_check_graph(lGraph);
@@ -616,8 +635,9 @@ edge_check_graph(lGraph);
 	  r=info->r;
 	}
 	break;
-//begin another;
-      }//switch
+      default:
+	; 
+    }//switch
         if (info->r!=NULLLOC){
 //pushing
 	    compute_pushing(tl,tp,tw,info,lGraph);
@@ -629,6 +649,7 @@ edge_check_graph(lGraph);
 #endif
     operation=get_op_r();
   }//while
+
 #ifdef PRE_ACC
       edge_is_local=1;
 edge_check_graph(lGraph);
