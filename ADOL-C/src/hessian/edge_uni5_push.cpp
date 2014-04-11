@@ -95,12 +95,6 @@ void edge_pushing_pre_s(short           tnum,
             case lt_zero :                                       /* lt_zero */
             case ge_zero :                                       /* ge_zero */
             case le_zero :                                       /* le_zero */
-            case neq_a_a:
-            case eq_a_a:
-            case le_a_a:
-            case ge_a_a:
-            case lt_a_a:
-            case gt_a_a:
                 break;
                 /************************************************************/
                 /*                                              ASSIGNMENTS */
@@ -115,6 +109,12 @@ void edge_pushing_pre_s(short           tnum,
                 edge_value_len-=2;
                 break;
             
+            case neq_a_a:
+            case eq_a_a:
+            case le_a_a:
+            case ge_a_a:
+            case lt_a_a:
+            case gt_a_a:
             case ref_assign_d_zero:
             case ref_assign_d_one:
             case ref_assign_d:
