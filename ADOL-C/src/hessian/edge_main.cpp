@@ -13,20 +13,6 @@
 #define ADD_INC_EDGE_COUNT	if (edge_is_local==0) { local_inc_edge_count++;} else {global_inc_edge_count++;}
 
 using namespace std;
-int local_inc_edge_count;
-int global_inc_edge_count;
-int del_edge_count;
-int edge_is_local=0;
-int is_symmetric=0;
-
-int edge_op_cnt;
-int edge_tape_size;
-double *edge_value;
-int *edge_index;
-int edge_value_len;
-int edge_index_len;
-int max_active;
-int edge_translate_flag;
 
 void (*increase_edge)(int ,int ,double , map<int, map<int,double> >*);
 
@@ -40,27 +26,30 @@ int edge_hess(
     unsigned int **cind,       /* column index                            */
     double       **values,     /* non-zero values                         */
     int           *options     /* control options                         */
-                               /* options[0]=0,    no pre-accumulation    */
-                               /*           =1,    pre-accumulation       */
+                               /* options[0]=0,    disable statement preaccumulation    */
+                               /*           =1,    enable  statement preaccumulation    */
                                /* options[1]=0,    ADOL-C indexing        */
                                /*           =1,    Computational Graph    */
 
 )
 {
   if ((options[0]!=0) && (options[0]!=1)){
-    fprintf(stderr,"edge_pushing requires options[0]=0 or 1\n");
-    return 0;
+    fprintf(stderr,"Edge_Hess requires options[0]=0 or 1 (Default is 0)\n");
+    options[0]=0;
   }
   if ((options[1]!=0) && (options[1]!=1)){
-    fprintf(stderr,"edge_pushing requires options[1]=0 or 1\n");
-    return 0;
+    fprintf(stderr,"Edge_Hess requires options[1]=0 or 1 (Default is 1)\n");
+    options[0]=1;
   }
-  vector<derivative_info*> *tape_info=new vector<derivative_info*>;
-  map<int,map<int,double> > *graph=new map<int, map<int, double> >;
+  map<locint,map<locint,double> > *graph=new map<locint, map<locint, double> >;
   unsigned int *indmap;
+  locint *edge_index;
+  double *edge_value;
+  unsigned int edge_index_len;
+  unsigned int edge_value_len;
+  unsigned int max_active;
 //Step 1: reverse sweep
-  edge_translate_flag=options[1];
-  edge_tape(tag,dep,indep,basepoint,tape_info,&indmap);
+  edge_tape(tag,dep,indep,basepoint,options[1],&indmap,&edge_index,&edge_value,&edge_index_len,&edge_value_len,&max_active)i;
 //Step 2: edge pushing
   local_inc_edge_count=0;
   global_inc_edge_count=0;
@@ -110,12 +99,12 @@ int edge_hess(
 }
 
 void edge_retrive(map<int, map<int, double> > *graph, unsigned int* indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values){
-  int n=0;
-  map<int, double> *edge;
-  for(map<int, map<int, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
+  unsigned int n=0;
+  map<locint, double> *edge;
+  for(map<locint, map<locint, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
   {
     edge=&(ii->second);
-    for(map<int, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
+    for(map<locint, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
       if (indmap[ii->first]>=indmap[mi->first]){
         n++;
       }
@@ -133,10 +122,10 @@ void edge_retrive(map<int, map<int, double> > *graph, unsigned int* indmap, int 
     *values=(double*)malloc(sizeof(double)*n);
   }
   n=0;
-  for(map<int, map<int, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
+  for(map<locint, map<locint, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
   {
     edge=&(ii->second);
-    for(map<int, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
+    for(map<locint, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
       if (indmap[ii->first]>=indmap[mi->first]){
         (*rind)[n]=indmap[ii->first];
         (*cind)[n]=indmap[mi->first];

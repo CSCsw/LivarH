@@ -1,24 +1,22 @@
 #ifndef __EDGE_MAIN_H__
 #define __EDGE_MAIN_H__
-#include <iostream>
-#include <vector>
 #include <map>
-#include <adolc/common.h>
+#include <limits.h>
+#include <adolc/adolc.h>
 using namespace std;
 
 /* timing utility */
 extern struct timeval tv1,tv2;
 
-#define NOT_IMPLEMENTED_YET fprintf(stderr,"not implemented yet\n");fflush(stderr);
+#define NOT_IMPLEMENTED_YET fprintf(stderr,"Edge_Hess: Not implemented yet\n");fflush(stderr);
 
-#define NO_ASSIGN_BYPASS
+#define NULLLOC UINT_MAX
 
-#define NULLLOC -1
 
 class derivative_info{
   public:
     unsigned char opcode;
-    int r,x,y;
+    locint r,x,y;
     double dx,dy;
     double px,py,pxy;
 
@@ -34,8 +32,8 @@ class derivative_info{
 class global_trace{
   public:
     int r;
-    map<int, double> *first;
-    map<int, map<int, double> > *second;
+    map<locint, double> *first;
+    map<locint, map<locint, double> > *second;
     global_trace(){
       r=NULLLOC;
       first=NULL;
@@ -58,10 +56,10 @@ int edge_hess(
     double       **values,     /* non-zero values                         */
     int           *options     /* control options                         */
 );
-void edge_retrive(map<int, map<int, double> > *graph, unsigned int *indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values);
+void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int *indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values);
 
-void increase_edge_a(int i,int j,double w,map<int, map<int,double> > *graph);
-void increase_edge_s(int i,int j,double w,map<int, map<int,double> > *graph);
+//void increase_edge_a(int i,int j,double w,map<int, map<int,double> > *graph);
+//void increase_edge_s(int i,int j,double w,map<int, map<int,double> > *graph);
 
 
 #endif

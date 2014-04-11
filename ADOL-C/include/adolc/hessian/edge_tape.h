@@ -1,6 +1,5 @@
 #ifndef __EDGE_TAPE_H__
 #define __EDGE_TAPE_H__
-#include <iostream>
 #include <vector>
 /*  edge_tape.cpp */
 int edge_tape(short tnum,         /* tape id */
@@ -9,6 +8,7 @@ int edge_tape(short tnum,         /* tape id */
               const double *basepoint, /* independent variable values */
               vector<derivative_info*> *tape_info_p,  /* derivative info on the tape */
               unsigned int **indmap); /* Mapping from location to independent index */
+
 void translate_tape(vector<derivative_info*> *tape_info);
  
 #endif
