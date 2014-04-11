@@ -5,6 +5,7 @@
 #include <map>
 #include <adolc/hessian/edge_main.h>
 /*  edge_uni5_push.cpp */
+
 void edge_pushing_a(short           tnum,
                     map<locint, map<locint,double> > *graph,
                     locint*         edge_index,

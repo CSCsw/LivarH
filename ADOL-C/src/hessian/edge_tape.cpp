@@ -14,17 +14,22 @@ using namespace std;
 
 
 #define EDGE_TRANSLATE_INDEX    if (edge_translate_flag==1) {                                               \
+printf("translating...old_len=%d, new_len=%d..",edge_t_old_len,edge_value_len-1);\
+fflush(stdout);\
                                     edge_t_new_len=edge_value_len-1;                                        \
 					                if (edge_t_new_len>=edge_t_old_len) {                                   \
-                                        int i;                                                              \
+                                        unsigned int i;                                                     \
                                         for(i=edge_t_old_len;i<edge_t_new_len;i++){                         \
-                                            edge_index[i]=edge_t_index[edge_index[i]];                      \
+                                            if (edge_index[i]!=NULLLOC)                                     \
+                                                edge_index[i]=edge_t_index[edge_index[i]];                  \
                                         }                                                                   \
                                         edge_t_index[edge_index[edge_t_new_len]]=edge_t_cur_index;          \
                                         edge_index[edge_t_new_len]=edge_t_cur_index;                        \
                                         edge_t_cur_index++;                                                 \
                                     }                                                                       \
                                     edge_t_old_len=edge_value_len;                                          \
+printf("....done\n");\
+fflush(stdout);\
                                 }
 
 
@@ -56,7 +61,7 @@ int edge_tape(  short tnum,                         /* tape id */
                 int             edge_translate_flag,/* 1=Translate the index or not */
                 unsigned int**  indmap_p,           /* Mapping from location to independent index */
                 locint**        edge_index_p,       /* The translated index (increasing) */
-                double*         edge_value_p,       /* The value of variables (for reverse) */
+                double**        edge_value_p,       /* The value of variables (for reverse) */
                 unsigned int*   edge_index_len_p,   /* The length of edge_index[] */
                 unsigned int*   edge_value_len_p,   /* The length of edge_value[] */
                 locint*         max_index_p)        /* The max index (after translation)    */
@@ -64,7 +69,7 @@ int edge_tape(  short tnum,                         /* tape id */
     unsigned int edge_t_new_len;
     unsigned int edge_t_old_len;
     unsigned int *edge_t_index;
-    unsigned int edge_t_cur_index;
+    locint edge_t_cur_index;
     int ret_val=1;
     int max_tmp;
 //   printf("This is where everything begins...\n");
@@ -91,15 +96,14 @@ int edge_tape(  short tnum,                         /* tape id */
     /*                                                                    INITs */
 
     init_for_sweep(tnum);
-    tag = tnum;
 
     if ((depcheck != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS]) ||
             (indcheck != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) ) {
-        fprintf(DIAG_OUT,"ADOL-C error: Tape_doc on tape %d  aborted!\n",tag);
+        fprintf(DIAG_OUT,"ADOL-C error: Tape_doc on tape %d  aborted!\n",tnum);
         fprintf(DIAG_OUT,"Number of dependent (%d) and/or independent (%d) "
                 "variables passed to Tape_doc is\ninconsistent with "
                 "number recorded on tape %d (%d:%d)\n", depcheck,
-                indcheck, tag, (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS],
+                indcheck, tnum, (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS],
                 (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]);
         exit (-1);
     }
@@ -227,15 +231,15 @@ int edge_tape(  short tnum,                         /* tape id */
     edge_tape_size+=10;
     max_index=edge_tape_size;
     int i;
-    (*indmapp)=new unsigned int[edge_tape_size];
+    indmap=new unsigned int[edge_tape_size];
     for(i=0;i<edge_tape_size;i++){indmap[i]=0;}
 
 //For translating the ADOLC locint into monotonic indexing
-    unsigned int edge_t_old_len=0;
-    unsigned int edge_t_new_len=0;
-    locint edge_t_cur_index=0;
+    edge_t_old_len=0;
+    edge_t_new_len=0;
+    edge_t_cur_index=0;
     if (edge_translate_flag==1){
-      edge_t_index=new int[edge_tape_size];
+      edge_t_index=new locint[edge_tape_size];
       for(i=0;i<edge_tape_size;i++){edge_t_index[i]=0;}
     }
 
@@ -246,14 +250,19 @@ int edge_tape(  short tnum,                         /* tape id */
     edge_index_len=0;
 
 
+printf("Begin sweeping\n");
+fflush(stdout);
 //Because dp_T0 works on ADOL-C locint indexint
     double *dp_T0=NULL;
-    dp_T0 = myalloc1(ADOLC_CURRENT_TAPE_INFOS.stats[NUM_MAX_LIVES]);
+//    dp_T0 = myalloc1(ADOLC_CURRENT_TAPE_INFOS.stats[NUM_MAX_LIVES]);
+    dp_T0=new double[edge_tape_size];
 
 //This sweep stores index&value
     init_for_sweep(tnum);
     operation=get_op_f();
     while (operation !=end_of_tape) {
+printf("op=%d\n",operation);
+fflush(stdout);
         switch (operation) {
                 /****************************************************************************/
                 /*                                                                  MARKERS */
@@ -1207,8 +1216,8 @@ Probably buggy :(
                 size = get_locint_f();
                 res  = get_locint_f();
                 d    = get_val_v_f(size);
-                for (l=0; l<size; l++)
-                    dp_T0[res+l] = d[l];
+                for (i=0; i<size; i++)
+                    dp_T0[res+i] = d[i];
                 break;
 
                 /*--------------------------------------------------------------------------*/
@@ -1266,5 +1275,6 @@ printf("edge_value_len=%d\n",edge_value_len);
     *edge_index_len_p=edge_index_len;
     *edge_value_len_p=edge_value_len;
     *max_index_p=max_index;
+    *indmap_p=indmap;
     return ret_val;
 }

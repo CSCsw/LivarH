@@ -2,11 +2,10 @@
 #define __EDGE_MAIN_H__
 #include <map>
 #include <limits.h>
-#include <adolc/adolc.h>
+#include <adolc/adolc_settings.h>
 using namespace std;
 
 /* timing utility */
-extern struct timeval tv1,tv2;
 
 #define NOT_IMPLEMENTED_YET fprintf(stderr,"Edge_Hess: Not implemented yet\n");fflush(stderr);
 
@@ -43,10 +42,10 @@ int edge_hess(
     double       **values,     /* non-zero values                         */
     int           *options     /* control options                         */
 );
+
 void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int *indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values);
 
 //void increase_edge_a(int i,int j,double w,map<int, map<int,double> > *graph);
 //void increase_edge_s(int i,int j,double w,map<int, map<int,double> > *graph);
-
 
 #endif

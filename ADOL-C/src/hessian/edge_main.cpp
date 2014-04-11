@@ -81,13 +81,12 @@ int edge_hess(
     edge_retrive(graph,indmap,nnz,rind,cind,values);
     delete[] indmap;
     delete[] edge_index;
-    delete[] dege_value;
-    delete tape_info;
+    delete[] edge_value;
     delete graph;
     return 1;
 }
 
-void edge_retrive(map<int, map<int, double> > *graph, unsigned int* indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values){
+void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int* indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values){
     unsigned int n=0;
     map<locint, double> *edge;
     for(map<locint, map<locint, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)

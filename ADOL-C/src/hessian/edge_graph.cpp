@@ -8,13 +8,10 @@
 #include <adolc/hessian/edge_main.h>
 #include <adolc/adolc.h>
 
-extern void (*increase_edge)(int ,int ,double , map<locint, map<locint,double> >*);
 extern int __edge_is_symmetric__;
 
-
-
 void increase_edge(locint i, locint j, double w, map<locint, map<locint, double> > *graph){
-    if (__edge_is_symmetric__){
+    if (__edge_is_symmetric__==0){
         if (i!=j){
             (*graph)[i][j]+=w;
             (*graph)[j][i]+=w;
@@ -43,7 +40,7 @@ void compute_pushing(unsigned int tl, locint *tp, double *tw, derivative_info* r
     
     edges = &(*graph)[ri->r];
     tl=0;
-	for (std::map<int,double>::iterator it=edges->begin(); it!=edges->end(); it++){
+	for (std::map<locint,double>::iterator it=edges->begin(); it!=edges->end(); it++){
         tp[tl]=it->first;tw[tl]=it->second;tl++;
     }
 //get rid of symmetric term
@@ -136,12 +133,12 @@ void compute_adjoints(derivative_info* ri, map<locint, double> *Adjoints){
 #ifdef NO_ASSIGN_BYPASS
 void compute_global_pushing(unsigned int tl, locint *tp, double *tw, locint r, map<locint, double> *first, map<locint, map<locint, double> > *gGraph){
     unsigned int i,j;
-    map<loc, double> *edges;
+    map<locint, double> *edges;
     locint p;
     double w;
     edges = &(*gGraph)[r];
     tl=0;
-    for (std::map<int,double>::iterator it=edges->begin(); it!=edges->end(); it++){
+    for (std::map<locint,double>::iterator it=edges->begin(); it!=edges->end(); it++){
         tp[tl]=it->first;tw[tl]=it->second;tl++;
     }
 //get rid of symmetric term

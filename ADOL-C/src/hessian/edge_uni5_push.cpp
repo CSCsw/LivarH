@@ -20,7 +20,6 @@ void edge_pushing_pre_a(short           tnum,
                     unsigned int    max_index
 ){
 #endif
-    increase_edge=&increase_edge_a;
 #endif
 #ifdef SYSMMETRIC_MATRIX
 #ifdef NO_PRE_ACC
@@ -43,14 +42,13 @@ void edge_pushing_pre_s(short           tnum,
                     unsigned int    max_index
 ){
 #endif
-    increase_edge=&increase_edge_s;
 #endif
     unsigned char operation;
     derivative_info* info=new derivative_info();
-    map<locint, double> *Adjoints= new map<int, double>;
+    map<locint, double> *Adjoints= new map<locint, double>;
 #ifdef PRE_ACC
-    map<locint, double> *lAdjoints= new map<int, double>;
-    map<locint, map<int, double> > *lGraph=new map<int, map<int, double> >;
+    map<locint, double> *lAdjoints= new map<locint, double>;
+    map<locint, map<locint, double> > *lGraph=new map<locint, map<locint, double> >;
     derivative_info* dinfo=new derivative_info();
     dinfo->r=NULLLOC;dinfo->x=NULLLOC;dinfo->y=NULLLOC;
     dinfo->dx=0.0;dinfo->dy=0.0;
