@@ -12,6 +12,7 @@ extern struct timeval tv1,tv2;
 
 #define NULLLOC UINT_MAX
 
+//#define NO_ASSING_BYPASS
 
 class derivative_info{
   public:
@@ -27,20 +28,6 @@ class derivative_info{
       px=0.0;py=0.0;pxy=0.0;
     };
     ~derivative_info(){};
-};
-
-class global_trace{
-  public:
-    int r;
-    map<locint, double> *first;
-    map<locint, map<locint, double> > *second;
-    global_trace(){
-      r=NULLLOC;
-      first=NULL;
-      second=NULL;
-    };
-    ~global_trace(){
-    }
 };
 
 

@@ -59,7 +59,7 @@ int edge_tape(  short tnum,                         /* tape id */
                 double*         edge_value_p,       /* The value of variables (for reverse) */
                 unsigned int*   edge_index_len_p,   /* The length of edge_index[] */
                 unsigned int*   edge_value_len_p,   /* The length of edge_value[] */
-                locint*   max_index_p,                /* The max index (after translation)    */
+                locint*         max_index_p)        /* The max index (after translation)    */
 {
     unsigned int edge_t_new_len;
     unsigned int edge_t_old_len;
@@ -1261,7 +1261,10 @@ printf("edge_value_len=%d\n",edge_value_len);
 //      edge_check_index(edge_index,edge_index_len);
       delete[] edge_t_index;
     }
+    *edge_index_p=edge_index;
+    *edge_value_p=edge_value;
+    *edge_index_len_p=edge_index_len;
+    *edge_value_len_p=edge_value_len;
+    *max_index_p=max_index;
     return ret_val;
 }
-
-

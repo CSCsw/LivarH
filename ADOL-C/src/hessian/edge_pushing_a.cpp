@@ -8,14 +8,8 @@
 #include <adolc/hessian/edge_check.h>
 #include <adolc/hessian/edge_tape.h>
 #include "oplate.h"
-#include <adolc/adalloc.h>
-#include <adolc/interfaces.h>
+#include <adolc/adolc.h>
 #include "taping_p.h"
-
-extern int inc_edge_count;
-extern int del_edge_count;
-extern void (*increase_edge)(int ,int ,double , map<int, map<int,double> >*);
-
 
 #define ASYSMMETRIC_MATRIX 1
 #define NO_PRE_ACC 1
