@@ -147,6 +147,25 @@ else
 fi
 AC_SUBST(ATRIG_ERF)
 
+#ADOL-C Edge_Hess Preaccumulation facility
+AC_MSG_CHECKING(whether to enable preaccumulation)
+AC_ARG_ENABLE(preacc,
+            [
+AS_HELP_STRING([--enable-preacc],[enable preaccumulation in edge_hess [default=no]])],
+            [preacc=$enableval],
+            [preacc=no])
+
+AC_MSG_RESULT($preacc)
+
+if test x$preacc = xyes ; then
+  PREACC="#define PREACC 1"
+else
+  PREACC="#undef PREACC"
+fi
+AC_SUBST(PREACC)
+
+
+
 AC_MSG_CHECKING(whether to use 32-bit or 64-bit locations)
 AC_ARG_ENABLE(ulong,[AS_HELP_STRING([--enable-ulong],
   [enable 64-bit locations (only available on 64-bit systems) [default=32-bit]])],
@@ -557,6 +576,15 @@ if test x$sparse = xyes && test x$have_colpack = xno; then
   Only sparsity patterns can be computed\033@<:@0m"
     warn=true
 fi
+echo \
+"  Enable preaccumulation in edge_hess: ${preacc}"
+if test x$preacc = xyes; then
+    echo -e \
+"  \033@<:@1;31mComputing hessian with asin/acos/atan/sinh/cosh/asinh/acosh/atanh
+   would cause potential incorrect results with Preaccumulation\033@<:@0m"
+     warn=true
+fi
+
 echo
 
 echo \

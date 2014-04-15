@@ -2,7 +2,7 @@
 #define __EDGE_MAIN_H__
 #include <map>
 #include <limits.h>
-#include <adolc/adolc_settings.h>
+#include <adolc/adolc.h>
 using namespace std;
 
 /* timing utility */

@@ -11,12 +11,11 @@
 #include <adolc/adolc.h>
 #include "taping_p.h"
 
-#ifdef NO_ASSIGN_BYPASS
+#ifdef PREACC
 
+#define PRE_ACC
 #define SYSMMETRIC_MATRIX 1
-#define PRE_ACC 1
 #include "edge_uni5_push.cpp"
 #undef SYSMMETRIC_MATRIX
 #undef PRE_ACC
-
 #endif

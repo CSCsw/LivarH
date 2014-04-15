@@ -53,7 +53,7 @@ void edge_pushing_pre_s(short           tnum,
     dinfo->r=NULLLOC;dinfo->x=NULLLOC;dinfo->y=NULLLOC;
     dinfo->dx=0.0;dinfo->dy=0.0;
     dinfo->px=0.0;dinfo->py=0.0;dinfo->pxy=0.0;
-    locint *dp= new locint[max_active];
+    locint *dp= new locint[max_index];
     int dl=0;
     int r;
 #endif
@@ -580,7 +580,6 @@ void edge_pushing_pre_s(short           tnum,
 #endif
 
 #ifdef PRE_ACC
-//    edge_check_info(info);
     switch (info->opcode){
         case assign_dep:
             dl=0;
@@ -626,8 +625,8 @@ void edge_pushing_pre_s(short           tnum,
 	        dl=0;
 	        delete lAdjoints;
 	        delete lGraph;
-            lAdjoints=new map<int, double>;
-            lGraph=new map<int, map<int, double> >;
+            lAdjoints=new map<locint, double>;
+            lGraph=new map<locint, map<locint, double> >;
 	        if ((info->opcode==eq_plus_prod)||(info->opcode==eq_min_prod)){
 	            dinfo->r=edge_index[edge_index_len+4];
 	            dinfo->x=edge_index[edge_index_len+3];
@@ -649,10 +648,13 @@ void edge_pushing_pre_s(short           tnum,
                 (*lAdjoints)[info->r]=1.0;
 	            r=info->r;
 	        }
+//edge_check_adjoints(Adjoints,10);
+//edge_check_graph(graph);
 	        break;
         default:
 	        ; 
         }//switch
+//edge_check_info(info);
         if (info->r!=NULLLOC){
 //pushing
 	        compute_pushing(tl,tp,tw,info,lGraph);
@@ -661,6 +663,7 @@ void edge_pushing_pre_s(short           tnum,
 //adjointing
 	        compute_adjoints(info,lAdjoints);
         }
+//edge_check_graph(lGraph);
 #endif
     operation=get_op_r();
     }//while
@@ -676,6 +679,7 @@ void edge_pushing_pre_s(short           tnum,
         compute_adjoints(dinfo,Adjoints);
     }
     dl=0;
+//edge_check_graph(graph);
 #endif
     end_sweep();
     delete info;

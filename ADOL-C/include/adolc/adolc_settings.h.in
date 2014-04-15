@@ -30,4 +30,8 @@ typedef @REAL_TYPE@ revreal;
 /* Enable/disable advanced branching */
 @ADVBRANCH@
 
+/*--------------------------------------------------------------------------*/
+/* Enable/disable preaccumulation in edge_hess */
+@PREACC@
+
 #endif

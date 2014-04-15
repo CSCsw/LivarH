@@ -47,7 +47,7 @@ void edge_check_edges(map<locint, double> *edge){
     cout<<endl;
 #endif
 }
-void edge_check_adjoints(map<locint, double> *Adjoints, int max_index){
+void edge_check_adjoints(map<locint, double> *Adjoints, locint max_index){
 #ifdef PRINT_CHECK_ADJOINTS
   unsigned int i;
   cout<<"--------------------------ADJOINT-----------------------------------------"<<endl;

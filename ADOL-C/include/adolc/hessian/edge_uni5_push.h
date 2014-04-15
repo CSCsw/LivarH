@@ -24,7 +24,7 @@ void edge_pushing_s(short           tnum,
                     unsigned int    max_index
 );
 
-#ifdef NO_ASSIGN_BYPASS
+#ifdef PREACC
 void edge_pushing_pre_a(short           tnum,
                     map<locint, map<locint,double> > *graph,
                     locint*         edge_index,

@@ -14,8 +14,6 @@ using namespace std;
 
 
 #define EDGE_TRANSLATE_INDEX    if (edge_translate_flag==1) {                                               \
-printf("translating...old_len=%d, new_len=%d..",edge_t_old_len,edge_value_len-1);\
-fflush(stdout);\
                                     edge_t_new_len=edge_value_len-1;                                        \
 					                if (edge_t_new_len>=edge_t_old_len) {                                   \
                                         unsigned int i;                                                     \
@@ -28,8 +26,6 @@ fflush(stdout);\
                                         edge_t_cur_index++;                                                 \
                                     }                                                                       \
                                     edge_t_old_len=edge_value_len;                                          \
-printf("....done\n");\
-fflush(stdout);\
                                 }
 
 
@@ -72,7 +68,6 @@ int edge_tape(  short tnum,                         /* tape id */
     locint edge_t_cur_index;
     int ret_val=1;
     int max_tmp;
-//   printf("This is where everything begins...\n");
     unsigned char operation;
     unsigned int* indmap;
     locint *edge_index;
@@ -250,8 +245,6 @@ int edge_tape(  short tnum,                         /* tape id */
     edge_index_len=0;
 
 
-printf("Begin sweeping\n");
-fflush(stdout);
 //Because dp_T0 works on ADOL-C locint indexint
     double *dp_T0=NULL;
 //    dp_T0 = myalloc1(ADOLC_CURRENT_TAPE_INFOS.stats[NUM_MAX_LIVES]);
@@ -261,8 +254,6 @@ fflush(stdout);
     init_for_sweep(tnum);
     operation=get_op_f();
     while (operation !=end_of_tape) {
-printf("op=%d\n",operation);
-fflush(stdout);
         switch (operation) {
                 /****************************************************************************/
                 /*                                                                  MARKERS */

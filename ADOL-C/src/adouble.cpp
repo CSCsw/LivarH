@@ -377,6 +377,7 @@ badouble& badouble::operator = ( const adub& a ) {
 /*--------------------------------------------------------------------------*/
 /* Assign an adouble an adub */
 /* olvo 980517 new version griewank */
+#ifndef PREACC
 
 adouble& adouble::operator = ( const adub& a ) {
     this->loc();  // call for late init
@@ -384,9 +385,11 @@ adouble& adouble::operator = ( const adub& a ) {
     return (*this);
 }
 
+#endif
 
 //Mu Wang: I need assignments to be explict in preaccumulation
-/*
+#ifdef PREACC
+
 adouble& adouble::operator = ( const adub& a ) {
     locint a_loc = a.loc();
     ADOLC_OPENMP_THREAD_NUMBER;
@@ -403,7 +406,8 @@ adouble& adouble::operator = ( const adub& a ) {
     ADOLC_GLOBAL_TAPE_VARS.store[location]=ADOLC_GLOBAL_TAPE_VARS.store[a_loc];
     return *this;
 }
-*/
+
+#endif
 
 /****************************************************************************/
 /*                                                           INPUT / OUTPUT */

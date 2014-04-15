@@ -12,10 +12,10 @@
 #include "taping_p.h"
 
 
-#ifdef NO_ASSIGN_BYPASS
+#ifdef PREACC
 
+#define PRE_ACC
 #define ASYSMMETRIC_MATRIX 1
-#define PRE_ACC 1
 #include "edge_uni5_push.cpp"
 #undef ASYSMMETRIC_MATRIX
 #undef PRE_ACC

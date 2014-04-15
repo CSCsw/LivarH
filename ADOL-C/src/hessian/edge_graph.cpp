@@ -130,7 +130,7 @@ void compute_adjoints(derivative_info* ri, map<locint, double> *Adjoints){
 }
 
 
-#ifdef NO_ASSIGN_BYPASS
+#ifdef PREACC
 void compute_global_pushing(unsigned int tl, locint *tp, double *tw, locint r, map<locint, double> *first, map<locint, map<locint, double> > *gGraph){
     unsigned int i,j;
     map<locint, double> *edges;
@@ -153,7 +153,7 @@ void compute_global_pushing(unsigned int tl, locint *tp, double *tw, locint r, m
         p=tp[i];w=tw[i];
         if (p!=r){
 //loop all adjoints
-            for(std::map<int, double>::iterator it=first->begin();it!=first->end();it++){
+            for(std::map<locint, double>::iterator it=first->begin();it!=first->end();it++){
                 if (it->first!=p){
 //px*w
                     increase_edge(it->first,p,it->second*w,gGraph);
@@ -166,8 +166,8 @@ void compute_global_pushing(unsigned int tl, locint *tp, double *tw, locint r, m
         }
         else{
 //for all unordered set
-            for(std::map<int, double>::iterator it1=first->begin();it1!=first->end();it1++){
-                for(std::map<int, double>::iterator it2=it1;it2!=first->end();it2++){
+            for(std::map<locint, double>::iterator it1=first->begin();it1!=first->end();it1++){
+                for(std::map<locint, double>::iterator it2=it1;it2!=first->end();it2++){
                     increase_edge(it1->first,it2->first,it1->second*it2->second*w,gGraph);
                 }
             }

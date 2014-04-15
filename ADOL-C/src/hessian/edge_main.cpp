@@ -2,8 +2,7 @@
 #include <vector>
 #include <map>
 #include <stdio.h>
-#include <adolc/adalloc.h>
-#include <adolc/interfaces.h>
+#include <adolc/adolc.h>
 #include <adolc/hessian/edge_main.h>
 #include <adolc/hessian/edge_check.h>
 #include <adolc/hessian/edge_tape.h>
@@ -64,15 +63,15 @@ int edge_hess(
         }
     }
     else{
-#ifdef NO_ASSIGN_BYPASS
+#ifdef PREACC
         if (options[1]==0){
             edge_pushing_pre_a(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
         }
         else{
-        edge_pushing_pre_s(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
+            edge_pushing_pre_s(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
         }
 #endif
-#ifndef NO_ASSIGN_BYPASS
+#ifndef PREACC
         fprintf(stderr, "Preaccumulation in Hessian must be enabled WITHOUT assign_a bypass\n");
 #endif
     }
