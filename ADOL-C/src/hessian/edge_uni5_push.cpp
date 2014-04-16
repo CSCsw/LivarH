@@ -683,6 +683,7 @@ void edge_pushing_pre_s(short           tnum,
     delete dinfo;
     delete lAdjoints;
     delete lGraph;
+    delete[] dp;
 #endif
     end_sweep();
     delete info;
