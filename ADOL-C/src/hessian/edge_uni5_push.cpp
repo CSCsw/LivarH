@@ -680,6 +680,9 @@ void edge_pushing_pre_s(short           tnum,
     }
     dl=0;
 //edge_check_graph(graph);
+    delete dinfo;
+    delete lAdjoints;
+    delete lGraph;
 #endif
     end_sweep();
     delete info;
