@@ -72,7 +72,7 @@ int edge_hess(
         }
 #endif
 #ifndef PREACC
-        fprintf(stderr, "Preaccumulation in Hessian must be enabled WITHOUT assign_a bypass\n");
+        fprintf(stderr, "Preaccumulation in Hessian must be enabled WITH --enable-preacc when configure\n");
 #endif
     }
 
