@@ -17,6 +17,7 @@
 #include <adolc/adalloc.h>
 #include <adolc/interfaces.h>
 #include "taping_p.h"
+#include "dvlparms.h"
 
 #if defined(ADOLC_INTERNAL)
 #    if HAVE_CONFIG_H
@@ -73,7 +74,7 @@ int jac_pat(
     if (crs == NULL) {
         fprintf(DIAG_OUT,"ADOL-C user error in jac_pat(...) : "
                 "parameter crs may not be NULL !\n");
-        exit(-1);
+        adolc_exit(-1,"",__func__,__FILE__,__LINE__);
     } else
         for (i=0; i<depen; i++)
             crs[i] = NULL;
@@ -132,7 +133,7 @@ void generate_seed_jac
 #else
 {
     fprintf(DIAG_OUT, "ADOL-C error: function %s can only be used if linked with ColPack\n", __FUNCTION__);
-    exit(-1);
+    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
 }
 #endif
 
@@ -165,7 +166,7 @@ int hess_pat(
     if (crs == NULL) {
         fprintf(DIAG_OUT,"ADOL-C user error in hess_pat(...) : "
                 "parameter crs may not be NULL !\n");
-        exit(-1);
+        adolc_exit(-1,"",__func__,__FILE__,__LINE__);
     } else
         for (i=0; i<indep; i++)
             crs[i] = NULL;
@@ -213,7 +214,7 @@ void generate_seed_hess
 #else
 {
     fprintf(DIAG_OUT, "ADOL-C error: function %s can only be used if linked with ColPack\n", __FUNCTION__);
-    exit(-1);
+    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
 }
 #endif
 
@@ -343,12 +344,12 @@ int sparse_jac(
       sJinfos.jr1d = (void *) jr1d;
       setTapeInfoJacSparse(tag, sJinfos);
       tapeInfos=getTapeInfos(tag);
-      memcpy(&ADOLC_CURRENT_TAPE_INFOS, tapeInfos, sizeof(TapeInfos));
+      ADOLC_CURRENT_TAPE_INFOS.copy(*tapeInfos);
     }
     else
       {
 	tapeInfos=getTapeInfos(tag);
-	memcpy(&ADOLC_CURRENT_TAPE_INFOS, tapeInfos, sizeof(TapeInfos));
+	ADOLC_CURRENT_TAPE_INFOS.copy(*tapeInfos);
 	sJinfos.depen    = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sJinfos.depen;
 	sJinfos.nnz_in    = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sJinfos.nnz_in;
 	sJinfos.JP        = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sJinfos.JP;
@@ -414,7 +415,8 @@ int sparse_jac(
 #else
 {
     fprintf(DIAG_OUT, "ADOL-C error: function %s can only be used if linked with ColPack\n", __FUNCTION__);
-    exit(-1);
+    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
+	return -1;
 }
 #endif
 
@@ -481,10 +483,10 @@ int sparse_hess(
 	else
 	  {
 	    tapeInfos=getTapeInfos(tag);
-	    memcpy(&ADOLC_CURRENT_TAPE_INFOS, tapeInfos, sizeof(TapeInfos));
+	    ADOLC_CURRENT_TAPE_INFOS.copy(*tapeInfos);
             if (indep != ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sHinfos.indep) {
                 fprintf(DIAG_OUT,"ADOL-C Error: wrong number of independents stored in hessian pattern.\n");
-                exit(-1);
+                adolc_exit(-1,"",__func__,__FILE__,__LINE__);
             }
 	    deepcopy_HP(&sHinfos.HP,ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sHinfos.HP,indep);	    
 	  }
@@ -538,13 +540,13 @@ int sparse_hess(
 	setTapeInfoHessSparse(tag, sHinfos);
 
 	tapeInfos=getTapeInfos(tag);
-	memcpy(&ADOLC_CURRENT_TAPE_INFOS, tapeInfos, sizeof(TapeInfos));
+	ADOLC_CURRENT_TAPE_INFOS.copy(*tapeInfos);
 
     }
     else
       {
 	tapeInfos=getTapeInfos(tag);
-	memcpy(&ADOLC_CURRENT_TAPE_INFOS, tapeInfos, sizeof(TapeInfos));
+	ADOLC_CURRENT_TAPE_INFOS.copy(*tapeInfos);
 	sHinfos.nnz_in = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sHinfos.nnz_in;
 	sHinfos.HP     = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sHinfos.HP;
     	sHinfos.Hcomp  = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sHinfos.Hcomp;
@@ -642,7 +644,8 @@ int sparse_hess(
 #else
 {
     fprintf(DIAG_OUT, "ADOL-C error: function %s can only be used if linked with ColPack\n", __FUNCTION__);
-    exit(-1);
+    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
+	return -1;
 }
 #endif
 
@@ -664,7 +667,7 @@ void set_HP(
     ADOLC_OPENMP_GET_THREAD_NUMBER;
 
     tapeInfos=getTapeInfos(tag);
-    memcpy(&ADOLC_CURRENT_TAPE_INFOS, tapeInfos, sizeof(TapeInfos));
+    ADOLC_CURRENT_TAPE_INFOS.copy(*tapeInfos);
     sHinfos.nnz_in = 0;
     deepcopy_HP(&sHinfos.HP,HP,indep);
     sHinfos.Hcomp  = NULL;
@@ -681,7 +684,7 @@ void set_HP(
 #else
 {
     fprintf(DIAG_OUT, "ADOL-C error: function %s can only be used if sparse configuration option was used\n", __FUNCTION__);
-    exit(-1);
+    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
 }
 #endif
 
@@ -697,13 +700,13 @@ void get_HP(
     ADOLC_OPENMP_GET_THREAD_NUMBER;
 
     tapeInfos=getTapeInfos(tag);
-    memcpy(&ADOLC_CURRENT_TAPE_INFOS, tapeInfos, sizeof(TapeInfos));
+    ADOLC_CURRENT_TAPE_INFOS.copy(*tapeInfos);
     deepcopy_HP(HP,ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.sHinfos.HP,indep);
 }
 #else
 {
     fprintf(DIAG_OUT, "ADOL-C error: function %s can only be used if sparse configuration option was used\n", __FUNCTION__);
-    exit(-1);
+    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
 }
 #endif
 
@@ -774,7 +777,7 @@ int bit_vector_propagation(
       
         if (( tight_mode ) && ( basepoint == NULL )) {
             fprintf(DIAG_OUT, "ADOL-C error in jac_pat(...) :  supply basepoint x for tight mode.\n");
-            exit(-1);
+            adolc_exit(-1,"",__func__,__FILE__,__LINE__);
         }
 
         /* indep partial derivatives for the whole Jacobian */
@@ -800,10 +803,10 @@ int bit_vector_propagation(
 
         if ( ! (indep_blocks_flags = (unsigned char*)
                                      calloc(i_blocks_per_strip, sizeof(char)) ) ) {
-            fprintf(DIAG_OUT, "ADOL-C error, "__FILE__
+            fprintf(DIAG_OUT, "ADOL-C error, " __FILE__
                     ":%i : \njac_pat(...) unable to allocate %i bytes !\n",
                     __LINE__, (int)(i_blocks_per_strip*sizeof(char)));
-            exit(-1);
+            adolc_exit(-1,"",__func__,__FILE__,__LINE__);
         }
 
         seed        = myalloc2_ulong(indep, p_stripmine);
@@ -877,10 +880,10 @@ int bit_vector_propagation(
                 if ((k > 0 ) || ( strip_idx == 0 )) {
                     if ( ! (crs[j] = (unsigned int*)realloc(crs[j],
                                             (k_old+k+1)*sizeof(unsigned int))) ) {
-                        fprintf(DIAG_OUT, "ADOL-C error, "__FILE__
+                        fprintf(DIAG_OUT, "ADOL-C error, " __FILE__
                                  ":%i : \njac_pat(...) unable to allocate %i bytes !\n",
                                 __LINE__, (int)((k_old+k+1)*sizeof(unsigned int)));
-                        exit(-1);
+                        adolc_exit(-1,"",__func__,__FILE__,__LINE__);
                     }
                     if ( strip_idx == 0 )
                         crs[j][0]  = 0;
@@ -929,10 +932,10 @@ int bit_vector_propagation(
         /* allocate memory --------------------------------------------------- */
         if ( ! (indep_blocks_flags = (unsigned char*)calloc(indep,
                                      sizeof(unsigned char)) ) ) {
-            fprintf(DIAG_OUT, "ADOL-C error, "__FILE__
+            fprintf(DIAG_OUT, "ADOL-C error, " __FILE__
                     ":%i : \njac_pat(...) unable to allocate %i bytes !\n",
                     __LINE__, (int)(indep*sizeof(unsigned char)));
-            exit(-1);
+            adolc_exit(-1,"",__func__,__FILE__,__LINE__);
         }
 
         seed        = myalloc2_ulong(q_stripmine, depen);
@@ -945,7 +948,7 @@ int bit_vector_propagation(
             if ( basepoint == NULL ) {
                 fprintf(DIAG_OUT, "ADOL-C error in jac_pat(..) :  ");
                 fprintf(DIAG_OUT, "no basepoint x for tight mode supplied.\n");
-                exit(-1);
+                adolc_exit(-1,"",__func__,__FILE__,__LINE__);
             }
 
             rc = zos_forward(tag, depen, indep, 1, basepoint, valuepoint);
@@ -1009,10 +1012,10 @@ int bit_vector_propagation(
                     k += *i_b_flags++;
 
                 if ( ! (crs[d_bl_idx] = (unsigned int*)malloc((k+1)*sizeof(unsigned int))) ) {
-                    fprintf(DIAG_OUT, "ADOL-C error, "__FILE__
+                    fprintf(DIAG_OUT, "ADOL-C error, " __FILE__
                             ":%i : \njac_pat(...) unable to allocate %i bytes !\n",
                             __LINE__, (int)((k+1)*sizeof(unsigned int)));
-                    exit(-1);
+                    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
                 }
                 crs[d_bl_idx][0] = k; /* number of non-zero indep. blocks */
                 k=1;
@@ -1138,13 +1141,9 @@ int ADOLC_get_sparse_jacobian( func_ad *const fun,
     //setNumDir(n);
     setMode(ADTL_INDO);
     {
-#ifdef __GNUC__
-	adouble x[n],y[m];
-#else
 	adouble *x, *y;
 	x = new adouble[n];
 	y = new adouble[m];
-#endif
     for (i=0; i < n ; i++){
       x[i] = basepoints[i];
       //x[i].setADValue(i,1);
@@ -1159,10 +1158,8 @@ int ADOLC_get_sparse_jacobian( func_ad *const fun,
     }
 
     ret_val = ADOLC_get_sparse_pattern(y, m, sJinfos.JP );
-#ifndef __GNUC__
 	delete[] x;
 	delete[] y;
-#endif
     }
     sJinfos.depen = m;
     sJinfos.nnz_in = 0;
@@ -1201,13 +1198,10 @@ int ADOLC_get_sparse_jacobian( func_ad *const fun,
     setNumDir(sJinfos.seed_clms);
     setMode(ADTL_FOV);
     {
-#ifdef __GNUC__
-	adouble x[n],y[m];
-#else
 	adouble *x, *y;
 	x = new adouble[n];
 	y = new adouble[m];
-#endif
+
     for (i=0; i < n ; i++){
       x[i] = basepoints[i];
       for (j=0; j < sJinfos.seed_clms; j++)
@@ -1219,10 +1213,9 @@ int ADOLC_get_sparse_jacobian( func_ad *const fun,
     for (i=0;i<m;i++)
        for (j=0; j< sJinfos.seed_clms;j++)
           sJinfos.B[i][j] = y[i].getADValue(j);
-#ifndef __GNUC__
+
 	delete[] x;
 	delete[] y;
-#endif
     }
 	/* recover compressed Jacobian => ColPack library */
 
@@ -1247,7 +1240,8 @@ int ADOLC_get_sparse_jacobian( func_ad *const fun,
 #else
 {
     fprintf(DIAG_OUT, "ADOL-C error: function %s can only be used if linked with ColPack\n", __FUNCTION__);
-    exit(-1);
+    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
+	return -1;
 }
 #endif
 
@@ -1319,7 +1313,7 @@ int ADOLC_get_sparse_jacobian(int n, int m, adouble *x, int *nnz, unsigned int *
 #else
 {
     fprintf(DIAG_OUT, "ADOL-C error: function %s can only be used if linked with ColPack\n", __FUNCTION__);
-    exit(-1);
+    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
 }
 #endif
 #endif

@@ -16,7 +16,7 @@
 #if !defined(ADOLC_TAPING_H)
 #define ADOLC_TAPING_H 1
 
-#include <adolc/common.h>
+#include <adolc/internal/common.h>
 
 BEGIN_C_DECLS
 
@@ -38,6 +38,7 @@ enum StatEntries {
     NUM_EQ_PROD,                      /* # of eq_*_prod for sparsity pattern */
     NO_MIN_MAX,  /* no use of min_op, deferred to abs_op for piecewise stuff */
     NUM_SWITCHES,                   /* # of abs calls that can switch branch */
+    NUM_PARAM, /* no of parameters (doubles) interchangable without retaping */
     STAT_SIZE                     /* represents the size of the stats vector */
 };
 
@@ -104,6 +105,8 @@ ADOLC_DLL_EXPORT int trace_on(short tnum, int keepTaylors,
 ADOLC_DLL_EXPORT void trace_off(int flag = 0);
 
 ADOLC_DLL_EXPORT bool isTaping();
+
+ADOLC_DLL_EXPORT void skip_tracefile_cleanup(short tnum);
 
 #endif
 

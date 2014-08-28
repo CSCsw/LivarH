@@ -197,6 +197,7 @@ results   Taylor-Jacobians       ------------          Taylor Jacobians
 #include "taping_p.h"
 #include <adolc/externfcts.h>
 #include "externfcts_p.h"
+#include "dvlparms.h"
 
 #include <math.h>
 #include <string.h>
@@ -425,13 +426,13 @@ int int_reverse_safe(
 	fprintf(DIAG_OUT, "ADOL-C error: Tape %d was not created compatible "
 		"with %s(..)\n              Please call enableMinMaxUsingAbs() "
 		"before trace_on(%d)\n", tnum, GENERATED_FILENAME, tnum);
-	exit(-1);
+	adolc_exit(-1,"",__func__,__FILE__,__LINE__);
     }
     else if (swchk != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_SWITCHES]) {
 	fprintf(DIAG_OUT, "ADOL-C error: Number of switches passed %d does not "
-		"match with the one recorded on tape %d (%d)\n",swchk,tnum,
+		"match with the one recorded on tape %d (%zu)\n",swchk,tnum,
 		ADOLC_CURRENT_TAPE_INFOS.stats[NUM_SWITCHES]);
-	exit(-1);
+	adolc_exit(-1,"",__func__,__FILE__,__LINE__);
     }
     else
 	switchnum = swchk - 1;
@@ -449,6 +450,7 @@ int int_reverse_safe(
     rp_T = (revreal *)malloc(ADOLC_CURRENT_TAPE_INFOS.stats[NUM_MAX_LIVES] *
             sizeof(revreal));
     if (rp_T == NULL) fail(ADOLC_MALLOC_FAILED);
+    ADOLC_CURRENT_TAPE_INFOS.workMode = ADOLC_FOS_REVERSE;
 #ifdef _ABS_NORM_
     memset(results,0,sizeof(double)*(indep+swchk));
 #endif
@@ -475,6 +477,7 @@ int int_reverse_safe(
     rp_T = (revreal *)malloc(ADOLC_CURRENT_TAPE_INFOS.stats[NUM_MAX_LIVES] *
             sizeof(revreal));
     if (rp_T == NULL) fail(ADOLC_MALLOC_FAILED);
+    ADOLC_CURRENT_TAPE_INFOS.workMode = ADOLC_FOV_REVERSE;
 #if !defined(ADOLC_USE_CALLOC)
     c_Ptr = (char *) ADOLC_GLOBAL_TAPE_VARS.dpp_A;
     *c_Ptr = 0;
@@ -514,7 +517,7 @@ int int_reverse_safe(
     if (taycheck < 0) {
         fprintf(DIAG_OUT,"\n ADOL-C error: reverse fails because it was not"
                 " preceded\nby a forward sweep with degree>0, keep=1!\n");
-        exit(-2);
+        adolc_exit(-2,"",__func__,__FILE__,__LINE__);
     };
 
     if((numdep != depen)||(numind != indep))
@@ -553,7 +556,9 @@ int int_reverse_safe(
 
                 /*--------------------------------------------------------------------------*/
             case start_of_tape:                                  /* start_of_tape */
+                break;
             case end_of_tape:                                      /* end_of_tape */
+                discard_params_r();
                 break;
 
 
@@ -639,6 +644,30 @@ int int_reverse_safe(
                 break;
 
                 /*--------------------------------------------------------------------------*/
+            case neg_sign_p:
+            case recipr_p:
+            case assign_p:            /* assign an adouble variable a    assign_d */
+                /* double value. (=) */
+                arg   = get_locint_r();
+                res   = get_locint_r();
+#if !defined(_NTIGHT_)
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg];
+#endif /* !_NTIGHT_ */
+
+                ASSIGN_A( Ares, ADJOINT_BUFFER[res])
+
+                FOR_0_LE_l_LT_p
+#if defined(_INT_REV_)                 
+                ARES_INC = 0;
+#else
+                ARES_INC = 0.0;
+#endif
+
+#if !defined(_NTIGHT_)
+                ADOLC_GET_TAYLOR(res);
+#endif /* !_NTIGHT_ */
+                break;
+                /*--------------------------------------------------------------------------*/
             case assign_d_zero:  /* assign an adouble variable a    assign_d_zero */
             case assign_d_one:   /* double value (0 or 1). (=)       assign_d_one */
                 res   = get_locint_r();
@@ -708,6 +737,18 @@ int int_reverse_safe(
                 break;
 
                 /*--------------------------------------------------------------------------*/
+            case eq_plus_p:            /* Add a floating point to an    eq_plus_d */
+                /* adouble. (+=) */
+                arg   = get_locint_r();
+                res   = get_locint_r();
+#if !defined(_NTIGHT_)
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg];
+
+                ADOLC_GET_TAYLOR(res);
+#endif /* !_NTIGHT_ */
+                break;
+
+                /*--------------------------------------------------------------------------*/
             case eq_plus_a:             /* Add an adouble to another    eq_plus_a */
                 /* adouble. (+=) */
                 res = get_locint_r();
@@ -740,6 +781,18 @@ int int_reverse_safe(
                break;
 
                 /*--------------------------------------------------------------------------*/
+            case eq_min_p:       /* Subtract a floating point from an    eq_min_d */
+                /* adouble. (-=) */
+                arg   = get_locint_r();
+                res   = get_locint_r();
+#if !defined(_NTIGHT_)
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg];
+
+                ADOLC_GET_TAYLOR(res);
+#endif /* !_NTIGHT_ */
+               break;
+
+                /*--------------------------------------------------------------------------*/
             case eq_min_a:        /* Subtract an adouble from another    eq_min_a */
                 /* adouble. (-=) */
                 res = get_locint_r();
@@ -766,6 +819,27 @@ int int_reverse_safe(
                 res   = get_locint_r();
 #if !defined(_NTIGHT_)
                 coval = get_val_r();
+#endif /* !_NTIGHT_ */
+
+#if!defined(_INT_REV_)
+                ASSIGN_A( Ares, ADJOINT_BUFFER[res])
+
+                FOR_0_LE_l_LT_p
+                ARES_INC *= coval;
+#endif
+
+#if !defined(_NTIGHT_)
+                ADOLC_GET_TAYLOR(res);
+#endif /* !_NTIGHT_ */
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case eq_mult_p:              /* Multiply an adouble by a    eq_mult_p */
+                /* flaoting point. (*=) */
+                arg   = get_locint_r();
+                res   = get_locint_r();
+#if !defined(_NTIGHT_)
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg];
 #endif /* !_NTIGHT_ */
 
 #if!defined(_INT_REV_)
@@ -854,6 +928,36 @@ int int_reverse_safe(
                 arg   = get_locint_r();
 #if !defined(_NTIGHT_)
                 coval = get_val_r();
+#endif /* !_NTIGHT_ */
+
+                ASSIGN_A( Ares, ADJOINT_BUFFER[res])
+                ASSIGN_A( Aarg, ADJOINT_BUFFER[arg])
+
+                FOR_0_LE_l_LT_p
+                { aTmp = ARES;
+#if defined(_INT_REV_)
+                  ARES_INC = 0;
+                  AARG_INC |= aTmp;
+#else
+                  ARES_INC = 0.0;
+                  AARG_INC += aTmp;
+#endif
+            }
+
+#if !defined(_NTIGHT_)
+                ADOLC_GET_TAYLOR(res);
+#endif /* !_NTIGHT_ */
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case plus_a_p:             /* Add an adouble and a double    plus_a_p */
+            case min_a_p:                /* Subtract an adouble from a    min_d_a */
+                /* (+) */
+                arg1  = get_locint_r();
+                res   = get_locint_r();
+                arg   = get_locint_r();
+#if !defined(_NTIGHT_)
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg1];
 #endif /* !_NTIGHT_ */
 
                 ASSIGN_A( Ares, ADJOINT_BUFFER[res])
@@ -1047,6 +1151,35 @@ int int_reverse_safe(
                 break;
 
                 /*--------------------------------------------------------------------------*/
+            case mult_a_p:         /* Multiply an adouble by a double    mult_a_p */
+                /* (*) */
+                arg1  = get_locint_r();
+                res   = get_locint_r();
+                arg   = get_locint_r();
+#if !defined(_NTIGHT_)
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg1];
+#endif /* !_NTIGHT_ */
+
+                ASSIGN_A( Ares, ADJOINT_BUFFER[res])
+                ASSIGN_A( Aarg, ADJOINT_BUFFER[arg])
+
+                FOR_0_LE_l_LT_p
+                { aTmp = ARES;
+#if defined(_INT_REV_)
+                  ARES_INC = 0;
+		  AARG_INC |= aTmp;
+#else
+                  ARES_INC = 0.0;
+                  AARG_INC += (aTmp==0)?0:(coval * aTmp);
+#endif
+            }
+
+#if !defined(_NTIGHT_)
+                ADOLC_GET_TAYLOR(res);
+#endif /* !_NTIGHT_ */
+                break;
+
+                /*--------------------------------------------------------------------------*/
             case div_a_a:           /* Divide an adouble by an adouble    div_a_a */
                 /* (/) */
                 res  = get_locint_r();
@@ -1112,6 +1245,46 @@ int int_reverse_safe(
                 }
 
 #if !defined(_NTIGHT_)
+		if (arg != res)
+                ADOLC_GET_TAYLOR(res);
+#endif /* !_NTIGHT_ */
+                break;
+
+
+                /****************************************************************************/
+            case div_p_a:             /* Division double - adouble (/)    div_p_a */
+                arg1  = get_locint_r();
+                res   = get_locint_r();
+                arg   = get_locint_r();
+
+#if !defined(_NTIGHT_)
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg1];
+#endif /* !_NTIGHT_ */
+
+                ASSIGN_A( Ares, ADJOINT_BUFFER[res])
+                ASSIGN_A( Aarg, ADJOINT_BUFFER[arg])
+
+#if !defined(_NTIGHT_)
+                /* olvo 980922 changed order to allow x=d/x */
+                r0 = -TRES;
+                if (arg == res)
+                    ADOLC_GET_TAYLOR(arg);
+                r0 /= TARG;
+#endif /* !_NTIGHT_ */
+
+                FOR_0_LE_l_LT_p
+                { aTmp = ARES;
+#if defined(_INT_REV_)
+                  ARES_INC = 0;
+                  AARG_INC |= aTmp;
+#else
+                  ARES_INC = 0.0;
+                  AARG_INC += (aTmp==0)?0:(aTmp * r0);
+#endif
+                }
+
+#if !defined(_NTIGHT_)
+		if (arg != res)
                 ADOLC_GET_TAYLOR(res);
 #endif /* !_NTIGHT_ */
                 break;
@@ -1315,6 +1488,45 @@ int int_reverse_safe(
                 arg   = get_locint_r();
 #if !defined(_NTIGHT_)
                 coval = get_val_r();
+#endif /* !_NTIGHT_ */
+
+                ASSIGN_A( Ares, ADJOINT_BUFFER[res])
+                ASSIGN_A( Aarg, ADJOINT_BUFFER[arg])
+
+#if !defined(_NTIGHT_)
+                /* olvo 980921 changed order to allow x=pow(x,n) */
+                r0 = TRES;
+                if (arg == res)
+                    ADOLC_GET_TAYLOR(arg);
+                if (TARG == 0.0)
+                    r0 = 0.0;
+                else
+                    r0 *= coval/TARG;
+#endif /* !_NTIGHT_ */
+
+                FOR_0_LE_l_LT_p {
+                    aTmp = ARES;
+#if defined(_INT_REV_)
+                    ARES_INC = 0;
+                    AARG_INC |= aTmp;
+#else
+                    ARES_INC = 0.0;
+                    AARG_INC += (aTmp==0)?0:(aTmp * r0);
+#endif
+            }
+
+#if !defined(_NTIGHT_)
+                ADOLC_GET_TAYLOR(res);
+#endif /* !_NTIGHT_ */
+                break;
+
+                /*--------------------------------------------------------------------------*/
+            case pow_op_p:                                                /* pow_op_p */
+                arg1  = get_locint_r();
+                res   = get_locint_r();
+                arg   = get_locint_r();
+#if !defined(_NTIGHT_)
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg1];
 #endif /* !_NTIGHT_ */
 
                 ASSIGN_A( Ares, ADJOINT_BUFFER[res])
@@ -1747,6 +1959,12 @@ int int_reverse_safe(
             case ge_a_a:
             case lt_a_a:
             case gt_a_a:
+            case neq_a_p:
+            case eq_a_p:
+            case le_a_p:
+            case ge_a_p:
+            case lt_a_p:
+            case gt_a_p:
 		res = get_locint_r();
 		arg1 = get_locint_r();
 		arg = get_locint_r();
@@ -1803,7 +2021,7 @@ int int_reverse_safe(
 		    ADOLC_GET_TAYLOR(res);
 #else
 		    fprintf(DIAG_OUT, "ADOL-C error: active subscripting does not work in safe mode, please use tight mode\n");
-		    exit(-2);
+		    adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
 		}
 		break;
@@ -1834,12 +2052,12 @@ int int_reverse_safe(
                      */
 		    if (arg1 != vectorloc+idx) {
 			fprintf(DIAG_OUT, "ADOL-C error: indexed active position does not match referenced position\nindexed = %zu, referenced = %d\n", vectorloc+idx, arg1);
-			exit(-2);
+			adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 		    }
 		    ADOLC_GET_TAYLOR(res);
 #else
 		    fprintf(DIAG_OUT, "ADOL-C error: active subscripting does not work in safe mode, please use tight mode\n");
-		    exit(-2);
+		    adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
 		}
 		break;
@@ -1865,7 +2083,7 @@ int int_reverse_safe(
 		ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif 
 		break;
 
@@ -1879,7 +2097,7 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -1902,7 +2120,30 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
+#endif /* !_NTIGHT_ */
+                break;
+
+            case ref_assign_p:            /* assign an adouble variable a    assign_p */
+                arg    = get_locint_r();
+                arg1   = get_locint_r();
+#if !defined(_NTIGHT_)
+		res = (size_t)trunc(fabs(TARG1));
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg];
+
+                ASSIGN_A( Ares, ADJOINT_BUFFER[res])
+
+                FOR_0_LE_l_LT_p
+#if defined(_INT_REV_)                 
+                ARES_INC = 0;
+#else
+                ARES_INC = 0.0;
+#endif
+
+                ADOLC_GET_TAYLOR(res);
+#else
+		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -1924,7 +2165,7 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -1953,7 +2194,7 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -1972,7 +2213,7 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 indexi--;
                 break;
@@ -1987,7 +2228,22 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
+#endif /* !_NTIGHT_ */
+                break;
+
+            case ref_eq_plus_p:            /* Add a floating point to an    eq_plus_d */
+                /* adouble. (+=) */
+                arg    = get_locint_r();
+                arg1   = get_locint_r();
+#if !defined(_NTIGHT_)
+		res = (size_t)trunc(fabs(TARG1));
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg];
+
+                ADOLC_GET_TAYLOR(res);
+#else
+		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -2012,7 +2268,7 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -2026,7 +2282,22 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
+#endif /* !_NTIGHT_ */
+               break;
+
+            case ref_eq_min_p:       /* Subtract a floating point from an    eq_min_p */
+                /* adouble. (-=) */
+                arg    = get_locint_r();
+                arg1   = get_locint_r();
+#if !defined(_NTIGHT_)
+		res = (size_t)trunc(fabs(TARG1));
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg];
+
+                ADOLC_GET_TAYLOR(res);
+#else
+		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                break;
 
@@ -2050,7 +2321,7 @@ int int_reverse_safe(
                ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -2071,7 +2342,29 @@ int int_reverse_safe(
                 ADOLC_GET_TAYLOR(res);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
+#endif /* !_NTIGHT_ */
+                break;
+
+            case ref_eq_mult_p:              /* Multiply an adouble by a    eq_mult_p */
+                /* flaoting point. (*=) */
+                arg    = get_locint_r();
+                arg1   = get_locint_r();
+#if !defined(_NTIGHT_)
+		res = (size_t)trunc(fabs(TARG1));
+                coval = ADOLC_CURRENT_TAPE_INFOS.pTapeInfos.paramstore[arg];
+
+#if !defined(_INT_REV_)
+                ASSIGN_A( Ares, ADJOINT_BUFFER[res])
+
+                FOR_0_LE_l_LT_p
+                ARES_INC *= coval;
+#endif
+
+                ADOLC_GET_TAYLOR(res);
+#else
+		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -2099,7 +2392,7 @@ int int_reverse_safe(
 #endif      
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
 		break;
 
@@ -2158,7 +2451,7 @@ int int_reverse_safe(
                 }
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
 	        }
                 break;
@@ -2199,7 +2492,7 @@ int int_reverse_safe(
                             MINDEC(ret_c,0);
 #else
 		fprintf(DIAG_OUT, "ADOL-C error: active vector element referencing does not work in safe mode, please use tight mode\n");
-		exit(-2);
+		adolc_exit(-2,"",__func__,__FILE__,__LINE__);
 #endif /* !_NTIGHT_ */
                 break;
 
@@ -2563,7 +2856,7 @@ int int_reverse_safe(
                 fprintf(DIAG_OUT,"ADOL-C fatal error in " GENERATED_FILENAME " ("
                         __FILE__
                         ") : no such operation %d\n", operation);
-                exit(-1);
+                adolc_exit(-1,"",__func__,__FILE__,__LINE__);
                 break;
         } /* endswitch */
 
@@ -2585,6 +2878,7 @@ int int_reverse_safe(
     free(upp_A);
 #endif
 
+    ADOLC_CURRENT_TAPE_INFOS.workMode = ADOLC_NO_MODE;
     end_sweep();
 
     return ret_c;

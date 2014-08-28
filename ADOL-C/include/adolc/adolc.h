@@ -18,7 +18,7 @@
 #if !defined(ADOLC_ADOLC_H)
 #define ADOLC_ADOLC_H 1
 
-#include <adolc/common.h>
+#include <adolc/internal/common.h>
 
 /****************************************************************************/
 /*                                                  Now the pure C++ THINGS */
@@ -54,6 +54,10 @@
 #include <adolc/sparse/sparsedrivers.h>
 #include <adolc/sparse/sparse_fo_rev.h>
 #endif
+
+/*--------------------------------------------------------------------------*/
+/* parameters */
+#include <adolc/param.h>
 
 /*--------------------------------------------------------------------------*/
 /* tape and value stack utilities */

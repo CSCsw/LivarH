@@ -29,20 +29,16 @@
 
 #ifdef _WINDOWS
 #define PATHSEPARATOR         "\\"
+#define __func__   __FUNCTION__
+#define snprintf _snprintf
 #else
 #define PATHSEPARATOR         "/"
 #endif
-/****************************************************************************/
-/* Tells ADOL-C which name space offers the mathematical functions          */
-#define ADOLC_MATH_NSP std
-/* For error function with gcc compiler                                     */
-#define ADOLC_MATH_NSP_ERF 
 
 /*--------------------------------------------------------------------------*/
 /* TAPE IDENTIFICATION (ADOLC & version check) */
-#define statSpace   40
-#define adolcIDSize  5
-/* NOTE: adolcIDSize + statSize <= statSpace required! */
+#define statSpace   42
+/* NOTE: ADOLC_ID and stats must fit in statSpace locints required!         */
 
 /*--------------------------------------------------------------------------*/
 /* ADOL-C configuration (never change this) */

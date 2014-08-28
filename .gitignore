@@ -39,7 +39,7 @@ resource.h
 .cproject
 .autotools
 ADOL-C/adolc
-ADOL-C/include/adolc/adolc_settings.h
+ADOL-C/include/adolc/internal/adolc_settings.h
 ADOL-C/examples/additional_examples/checkpointing/checkpointing
 ADOL-C/examples/additional_examples/checkpointing/*.tap
 ADOL-C/examples/additional_examples/detexam/detexam
@@ -59,6 +59,7 @@ ADOL-C/examples/additional_examples/lufact/LUsolve
 ADOL-C/examples/additional_examples/ode/od2exam
 ADOL-C/examples/additional_examples/ode/od3exam
 ADOL-C/examples/additional_examples/ode/odexam
+ADOL-C/examples/additional_examples/param/paramexam
 ADOL-C/examples/additional_examples/pow/powexam
 ADOL-C/examples/additional_examples/scal/scalexam
 ADOL-C/examples/additional_examples/speelpenning/speelpenning

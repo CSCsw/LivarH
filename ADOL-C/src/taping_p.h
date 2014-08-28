@@ -14,7 +14,7 @@
 #if !defined(ADOLC_TAPING_P_H)
 #define ADOLC_TAPING_P_H 1
 
-#include <adolc/common.h>
+#include <adolc/internal/common.h>
 #include <adolc/taping.h>
 #include <errno.h>
 #ifdef __cplusplus
@@ -37,7 +37,9 @@ enum WORKMODES {
     ADOLC_FOS_REVERSE,
     ADOLC_FOV_REVERSE,
     ADOLC_HOS_REVERSE,
-    ADOLC_HOV_REVERSE
+    ADOLC_HOV_REVERSE,
+
+    ADOLC_TAPING
 };
 
 /****************************************************************************/
@@ -72,6 +74,8 @@ enum ADOLC_ERRORS {
     ADOLC_MALLOC_FAILED,
     ADOLC_INTEGER_TAPE_FOPEN_FAILED,
     ADOLC_INTEGER_TAPE_FREAD_FAILED,
+    ADOLC_VALUE_TAPE_FOPEN_FAILED,
+    ADOLC_VALUE_TAPE_FREAD_FAILED,
     ADOLC_TAPE_TO_OLD,
     ADOLC_WRONG_LOCINT_SIZE,
     ADOLC_MORE_STAT_SPACE_REQUIRED,
@@ -114,7 +118,8 @@ enum ADOLC_ERRORS {
     ADOLC_CHECKPOINTING_REVOLVE_IRREGULAR_TERMINATED,
     ADOLC_CHECKPOINTING_UNEXPECTED_REVOLVE_ACTION,
     ADOLC_WRONG_PLATFORM_32,
-    ADOLC_WRONG_PLATFORM_64
+    ADOLC_WRONG_PLATFORM_64,
+    ADOLC_TAPING_NOT_ACTUALLY_TAPING
 };
 /* additional infos fail can work with */
 extern int failAdditionalInfo1;
@@ -169,11 +174,6 @@ typedef struct PersistantTapeInfos { /* survive tape re-usage */
     int jacSolv_nax, jacSolv_modeold, jacSolv_cgd;
 
 #ifdef SPARSE
-    /* sparse derivative matrices */
-
-    int inJacSparseUse;
-    int inHessSparseUse;
-
     /* sparse Jacobian matrices */
 
     SparseJacInfos sJinfos;
@@ -199,6 +199,12 @@ typedef struct PersistantTapeInfos { /* survive tape re-usage */
      */
     int skipFileCleanup;
 
+    revreal *paramstore;
+#ifdef __cplusplus
+    PersistantTapeInfos();
+    ~PersistantTapeInfos();
+    void copy(const PersistantTapeInfos&);
+#endif
 } PersistantTapeInfos;
 
 /**
@@ -293,6 +299,8 @@ typedef struct TapeInfos {
 #if defined(__cplusplus)
     TapeInfos();
     TapeInfos(short tapeID);
+    ~TapeInfos() {}
+    void copy(const TapeInfos&);
 #endif
 }
 TapeInfos;
@@ -314,12 +322,17 @@ typedef struct GlobalTapeVarsCL {
     char branchSwitchWarning;
     TapeInfos *currentTapeInfosPtr;
     uint nominmaxFlag;
+    size_t numparam;
+    size_t maxparam;
+    double *pStore;
 #ifdef __cplusplus
+    StoreManager *paramStoreMgrPtr;
     StoreManager *storeManagerPtr;
     GlobalTapeVarsCL();
     ~GlobalTapeVarsCL();
     const GlobalTapeVarsCL& operator=(const GlobalTapeVarsCL&);
 #else
+    void *paramStoreMgrPtr;
     void *storeManagerPtr;
 #endif
 }
@@ -662,6 +675,22 @@ void clearTapeBaseNames();
 /* the binary when linking statically!                                      */
 /****************************************************************************/
 void markNewTape();
+
+/****************************************************************************/
+/* Allows us to throw an exception instead of calling exit() in case of a   */
+/* irrecoverable error                                                      */
+/****************************************************************************/
+void adolc_exit(int errorcode, const char *what, const char *function, const char* file, int line);
+
+/****************************************************************************/
+/* Discards parameters from the end of value tape during reverse mode       */
+/****************************************************************************/
+void discard_params_r();
+
+/****************************************************************************/
+/* Frees parameter indices after taping is complete                         */
+/****************************************************************************/
+void free_all_taping_params();
 
 END_C_DECLS
 

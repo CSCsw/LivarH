@@ -16,9 +16,10 @@
 #include <limits>
 #include <cmath>
 
-#include <adolc/advector.h>
+#include <adolc/adouble.h>
 #include "oplate.h"
 #include "taping_p.h"
+#include "dvlparms.h"
 
 using std::vector;
 
@@ -30,7 +31,7 @@ adubref::adubref( locint lo, locint ref ) {
     if (ref != refloc) {
 	fprintf(DIAG_OUT,"ADOL-C error: strange construction of an active"
 		" vector subscript reference\n(passed ref = %d, stored refloc = %d)\n",ref,refloc);
-	exit(-2);
+	adolc_exit(-2,"",__func__,__FILE__,__LINE__);
     }
 }
 
@@ -344,16 +345,6 @@ adubref& adubref::operator *= ( const badouble& y ) {
     return *this;
 }
 
-adubref& adubref::operator /= (double y) {
-    *this *=  (1.0/y);
-    return *this;
-}
-
-adubref& adubref::operator /= (const badouble& y) {
-    *this *=  (1.0/y);
-    return *this;
-}
-
 void condassign( adubref res,         const badouble &cond,
                  const badouble &arg1, const badouble &arg2 ) {
     ADOLC_OPENMP_THREAD_NUMBER;
@@ -466,11 +457,11 @@ adubref advector::operator[](const badouble& index) {
 adouble advector::lookupindex(const badouble& x, const badouble& y) const {
     if (!nondecreasing()) {
 	fprintf(DIAG_OUT, "ADOL-C error: can only call lookup index if advector ist nondecreasing\n");
-	exit(-2);
+	adolc_exit(-2,"",__func__,__FILE__,__LINE__);
     }
     if (y.value() < 0) {
 	fprintf(DIAG_OUT, "ADOL-C error: index lookup needs a nonnegative denominator\n");
-	exit(-2);
+	adolc_exit(-2,"",__func__,__FILE__,__LINE__);
     }
     adouble r = 0;
     size_t n = data.size();

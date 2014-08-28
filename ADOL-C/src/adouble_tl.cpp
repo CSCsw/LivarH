@@ -25,8 +25,11 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include "dvlparms.h"
 
 using std::cout;
+
+extern "C" void adolc_exit(int errorcode, const char *what, const char* function, const char *file, int line);
 
 namespace adtl {
 
@@ -62,7 +65,7 @@ istream& operator >> ( istream& in, adouble& a) {
 	if (num>adouble::numDir)
 	{
 	    cout << "ADOL-C error: to many directions in input\n";
-	    exit(-1);
+	    adolc_exit(-1,"",__func__,__FILE__,__LINE__);
 	}
 	do in >> c;
 	while (c!=':' && !in.eof());
