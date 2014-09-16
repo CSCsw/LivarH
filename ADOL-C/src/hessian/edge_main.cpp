@@ -7,7 +7,7 @@
 #include <adolc/hessian/edge_check.h>
 #include <adolc/hessian/edge_tape.h>
 #include <adolc/hessian/edge_uni5_push.h>
-
+#include <adolc/hessian/edge_b_tree.h>
 
 #define ADD_INC_EDGE_COUNT	if (edge_is_local==0) { local_inc_edge_count++;} else {global_inc_edge_count++;}
 
@@ -15,7 +15,7 @@ using namespace std;
 
 int __edge_is_symmetric__=1;
 
-void (*increase_edge)(int ,int ,double , map<int, map<int,double> >*);
+void (*increase_edge)(int ,int ,double , map<locint, EdgeBTree>);
 
 int edge_hess(
     short           tag,        /* tape identification                     */
@@ -42,7 +42,8 @@ int edge_hess(
         fprintf(stderr,"Edge_Hess requires options[1]=0 or 1 (Default is 1)\n");
         options[0]=1;
     }
-    map<locint,map<locint,double> > *graph=new map<locint, map<locint, double> >;
+//    map<locint,map<locint,double> > *graph=new map<locint, map<locint, double> >;
+    map<locint, EdgeBTree> *graph = new map<locint, EdgeBTree>;
     unsigned int *indmap;
     locint *edge_index;
     double *edge_value;
@@ -85,17 +86,30 @@ int edge_hess(
     return 1;
 }
 
-void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int* indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values){
+void edge_retrive(map<locint, EdgeBTree> *graph, unsigned int* indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values){
     unsigned int n=0;
-    map<locint, double> *edge;
+    EdgeBTree *edge;
     for(map<locint, map<locint, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
     {
         edge=&(ii->second);
+/*
         for(map<locint, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
             if (indmap[ii->first]>=indmap[mi->first]){
                 n++;
             }
         }
+*/
+        size_t size;
+        locint *ind;
+        double *weight;
+        edge->ToArray(&size, &ind, &weight);
+        for(size_t i = 0; i < size; ++i) {
+          if (indmap[ii->first] >= indmap[ind[i]]) {
+            ++n;
+          }
+        }
+        free(ind);
+        free(weight);
     }
 //  cout<<"nnz="<<n<<endl;
     *nnz=n;
@@ -112,14 +126,20 @@ void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int* indmap
     for(map<locint, map<locint, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
     {
         edge=&(ii->second);
-        for(map<locint, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
-            if (indmap[ii->first]>=indmap[mi->first]){
-                (*rind)[n]=indmap[ii->first];
-                (*cind)[n]=indmap[mi->first];
-                (*values)[n]=mi->second;
-                n++;
-            }
+        size_t size;
+        locint *ind;
+        double *weight;
+        edge->ToArray(&size, &ind, &weight);
+        for(size_t i = 0; i < size; ++i) {
+          if (indmap[ii->first] >= indmap[ind[i]]) {
+            (*rind)[n]=indmap[ii->first];
+            (*cind)[n]=indmap[mi->first];
+            (*values)[n]=mi->second;
+            ++n;
+          }
         }
+        free(ind);
+        free(weight);
     }
 }
 
