@@ -3,6 +3,7 @@
 #include <map>
 #include <cmath>
 #include <adolc/hessian/edge_check.h>
+#include <adolc/hessian/edge_b_tree.h>
 //#define PRINT_CHECK_EDGES
 //#define PRINT_CHECK_GRAPH
 //#define PRINT_CHECK_INFO
@@ -14,6 +15,7 @@ void edge_check_info(derivative_info* ri){
      cout << "op="<<(int)ri->opcode<<": res="<<ri->r<<" x="<<ri->x<<" y="<<ri->y<<std::endl;
      cout<<"dx="<<ri->dx<<"  dy="<<ri->dy<<endl;
      cout<<"px="<<ri->px<<"  py="<<ri->py<<"  pxy="<<ri->pxy<<endl;
+     fflush(stdout);
 #endif
 }
 void edge_check_index(locint *edge_index, unsigned int edge_index_len){
@@ -24,27 +26,32 @@ void edge_check_index(locint *edge_index, unsigned int edge_index_len){
   }
 #endif
 }
-void edge_check_graph(map<locint, map<locint, double> > *graph){
+void edge_check_graph(map<locint, EdgeBTree* > *graph){
 #ifdef PRINT_CHECK_GRAPH
-  map<locint, double> *edge;
-  for(map<locint, map<locint, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
+  EdgeBTree *edge;
+  for(map<locint, EdgeBTree*>::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
   {
-    edge=&(ii->second);
-    cout<<ii->first<<": "<<" size="<<edge->size()<<"  :";
-    for(map<locint, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
-      cout<<"["<<mi->first<<"]="<<mi->second<<"  ";
-    }
-    cout<<endl;
+    edge=ii->second;
+    printf("Row[%d] ",ii->first);
+    fflush(stdout);
+    edge_check_edges(edge);
   }
 #endif
 }
-void edge_check_edges(map<locint, double> *edge){
+void edge_check_edges(EdgeBTree *edge){
 #ifdef PRINT_CHECK_EDGES
-    cout<<"A: "<<" size="<<edge->size()<<"  :";
-    for(map<locint, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
-      cout<<"["<<mi->first<<"]="<<mi->second<<"  ";
-    }
-    cout<<endl;
+  size_t size;
+  locint *tp;
+  double *tw;
+  edge->ToArrayAlloc(&size, &tp, &tw);
+  printf(" (%d): ", size);
+  for(size_t i=0; i<size; i++) {
+    printf("[%d]=%.5f, ", tp[i], tw[i]);
+  }
+  printf("\n");
+  fflush(stdout);
+  free(tp);
+  free(tw);
 #endif
 }
 void edge_check_adjoints(map<locint, double> *Adjoints, locint max_index){

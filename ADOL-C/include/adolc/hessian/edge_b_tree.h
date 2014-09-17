@@ -1,5 +1,6 @@
-
-typedef unsigned int locint;
+#ifndef _EDGE_B_TREE_H_
+#define _EDGE_B_TREE_H_
+#include <adolc/internal/adolc_settings.h>
 
 class EdgeBTreeBlock {
  public:
@@ -48,3 +49,5 @@ class EdgeBTree {
   size_t size;
 
 };
+
+#endif

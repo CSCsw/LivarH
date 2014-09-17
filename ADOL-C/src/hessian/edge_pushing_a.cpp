@@ -7,6 +7,7 @@
 #include <adolc/hessian/edge_graph.h>
 #include <adolc/hessian/edge_check.h>
 #include <adolc/hessian/edge_tape.h>
+#include <adolc/hessian/edge_b_tree.h>
 #include "oplate.h"
 #include <adolc/adolc.h>
 #include "taping_p.h"

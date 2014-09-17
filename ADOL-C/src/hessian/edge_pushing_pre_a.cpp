@@ -6,6 +6,7 @@
 #include <adolc/hessian/edge_graph.h>
 #include <adolc/hessian/edge_check.h>
 #include <adolc/hessian/edge_tape.h>
+#include <adolc/hessian/edge_b_tree.h>
 #include <cmath>
 #include "oplate.h"
 #include <adolc/adolc.h>
@@ -16,7 +17,7 @@
 
 #define PRE_ACC
 #define ASYSMMETRIC_MATRIX 1
-#include "edge_uni5_push.cpp"
+//#include "edge_uni5_push.cpp"
 #undef ASYSMMETRIC_MATRIX
 #undef PRE_ACC
 

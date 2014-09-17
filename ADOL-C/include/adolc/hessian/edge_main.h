@@ -5,6 +5,7 @@
 #include <adolc/adolc.h>
 using namespace std;
 
+class EdgeBTree;
 /* timing utility */
 
 #define NOT_IMPLEMENTED_YET fprintf(stderr,"Edge_Hess: Not implemented yet\n");fflush(stderr);
@@ -43,7 +44,14 @@ int edge_hess(
     int           *options     /* control options                         */
 );
 
-void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int *indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values);
+void edge_retrive(map<locint, EdgeBTree* > *graph,
+                  unsigned int *indmap,
+                  int *nnz,
+                  unsigned int **rind,
+                  unsigned int **cind,
+                  double **values,
+                  locint *tp,
+                  double *tw);
 
 //void increase_edge_a(int i,int j,double w,map<int, map<int,double> > *graph);
 //void increase_edge_s(int i,int j,double w,map<int, map<int,double> > *graph);

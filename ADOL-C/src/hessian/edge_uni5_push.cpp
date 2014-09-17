@@ -2,53 +2,52 @@
 #ifdef ASYSMMETRIC_MATRIX
 #ifdef NO_PRE_ACC
 void edge_pushing_a(short           tnum,
-                    map<locint, map<locint,double> > *graph,
+                    map<locint, EdgeBTree* > *graph,
                     locint*         edge_index,
                     double*         edge_value,
                     unsigned int    edge_index_len,
                     unsigned int    edge_value_len,
-                    unsigned int    max_index
-){
+                    unsigned int    max_index) {
 #endif
 #ifdef PRE_ACC
 void edge_pushing_pre_a(short           tnum,
-                    map<locint, map<locint,double> > *graph,
-                    locint*         edge_index,
-                    double*         edge_value,
-                    unsigned int    edge_index_len,
-                    unsigned int    edge_value_len,
-                    unsigned int    max_index
-){
+                        map<locint, EdgeBTree > *graph,
+                        locint*         edge_index,
+                        double*         edge_value,
+                        unsigned int    edge_index_len,
+                        unsigned int    edge_value_len,
+                        unsigned int    max_index) {
 #endif
 #endif
 #ifdef SYSMMETRIC_MATRIX
 #ifdef NO_PRE_ACC
 void edge_pushing_s(short           tnum,
-                    map<locint, map<locint,double> > *graph,
+                    map<locint, EdgeBTree* > *graph,
                     locint*         edge_index,
                     double*         edge_value,
                     unsigned int    edge_index_len,
                     unsigned int    edge_value_len,
-                    unsigned int    max_index
-){
+                    unsigned int    max_index) {
 #endif
 #ifdef PRE_ACC
 void edge_pushing_pre_s(short           tnum,
-                    map<locint, map<locint,double> > *graph,
+                    map<locint, EdgeBTree > *graph,
                     locint*         edge_index,
                     double*         edge_value,
                     unsigned int    edge_index_len,
                     unsigned int    edge_value_len,
-                    unsigned int    max_index
-){
+                    unsigned int    max_index) {
 #endif
 #endif
     unsigned char operation;
     derivative_info* info=new derivative_info();
-    map<locint, double> *Adjoints= new map<locint, double>;
+//    map<locint, double> *Adjoints= new map<locint, double>;
+    map<locint, double> *Adjoints = new map<locint, double>;
 #ifdef PRE_ACC
-    map<locint, double> *lAdjoints= new map<locint, double>;
-    map<locint, map<locint, double> > *lGraph=new map<locint, map<locint, double> >;
+//    map<locint, double> *lAdjoints= new map<locint, double>;
+//    map<locint, map<locint, double> > *lGraph=new map<locint, map<locint, double> >;
+    map<locint, double> *lAdjoints = new map<locint, double>;
+    map<locint, EdgeBTree > *lGraph = new map<locint, EdgeBTree >;
     derivative_info* dinfo=new derivative_info();
     dinfo->r=NULLLOC;dinfo->x=NULLLOC;dinfo->y=NULLLOC;
     dinfo->dx=0.0;dinfo->dy=0.0;
@@ -62,10 +61,8 @@ void edge_pushing_pre_s(short           tnum,
     locint p;
     double w;
     double vx,vy,vr,vc;
-    unsigned int tl;
     locint *tp = new locint[max_index];
     double *tw = new double[max_index];
-    map<locint, double> *edges;
 
     init_rev_sweep(tnum);
     operation=get_op_r();
@@ -135,6 +132,7 @@ void edge_pushing_pre_s(short           tnum,
             case assign_dep:           /* assign a float variable a    assign_dep */
                 /* dependent adouble value. (>>=) */
                 (*Adjoints)[edge_index[--edge_index_len]]=1.0;
+                graph->insert(std::pair<locint, EdgeBTree*>(edge_index[edge_index_len], new EdgeBTree()));
                 edge_value_len-=1;
                 break;
 
@@ -197,8 +195,8 @@ void edge_pushing_pre_s(short           tnum,
                 info->x=edge_index[--edge_index_len];
                 info->y=edge_index[--edge_index_len];
                 info->dx=1.0;info->dy=1.0;
-                compute_pushing(tl,tp,tw,info,graph);
-                compute_adjoints(info,Adjoints);
+                compute_pushing(tp,tw,info,graph);
+                compute_adjoints(info, Adjoints);
                 info->r=info->y;
                 info->x=edge_index[--edge_index_len];
                 info->y=edge_index[--edge_index_len];
@@ -229,7 +227,7 @@ void edge_pushing_pre_s(short           tnum,
                 info->x=edge_index[--edge_index_len];
                 info->y=edge_index[--edge_index_len];
                 info->dx=1.0;info->dy=-1.0;
-                compute_pushing(tl,tp,tw,info,graph);
+                compute_pushing(tp,tw,info,graph);
                 compute_adjoints(info,Adjoints);
 
                 info->r=info->y;
@@ -570,12 +568,19 @@ void edge_pushing_pre_s(short           tnum,
         if (info->r!=NULLLOC){
 //edge_check_info(info);
 //pushing
-            compute_pushing(tl,tp,tw,info,graph);
+            compute_pushing(tp,tw,info,graph);
+//printf("pushing done!\n");
+//fflush(stdout);
 //creating
             compute_creating(info,Adjoints,graph);
+//printf("creating done!\n");
+//fflush(stdout);
 //adjointing
             compute_adjoints(info,Adjoints);
-//	edge_check_graph(graph);
+//printf("adjoints done!\n");
+//fflush(stdout);
+
+//edge_check_graph(graph);
     }
 #endif
 
@@ -614,69 +619,69 @@ void edge_pushing_pre_s(short           tnum,
         case cond_assign_s:
 //push previous result to Global Trace
 //edge_check_graph(lGraph);
-	        compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
-	        compute_global_creating(r,lGraph,Adjoints,graph);
-	        compute_global_adjoints(r,lAdjoints,Adjoints);
+	    compute_global_pushing(tl, tp, tw, r, lAdjoints, graph);
+	    compute_global_creating(tl, tp, r, lGraph, Adjoints, graph);
+	    compute_global_adjoints(r, lAdjoints, Adjoints);
             for(i=0;i<dl;i++){
-	            dinfo->r=dp[i];
-	            compute_pushing(tl,tp,tw,dinfo,graph);
-	            compute_adjoints(dinfo,Adjoints);
+	        dinfo->r=dp[i];
+	        compute_pushing(tl, tp, tw, dinfo, graph);
+	        compute_adjoints(dinfo, Adjoints);
             }
-	        dl=0;
-	        delete lAdjoints;
-	        delete lGraph;
+	    dl=0;
+            delete lAdjoints;
+            delete lGraph;
             lAdjoints=new map<locint, double>;
-            lGraph=new map<locint, map<locint, double> >;
-	        if ((info->opcode==eq_plus_prod)||(info->opcode==eq_min_prod)){
-	            dinfo->r=edge_index[edge_index_len+4];
-	            dinfo->x=edge_index[edge_index_len+3];
-	            dinfo->y=edge_index[edge_index_len+2];
-	            dinfo->dx=1.0;
-	            if (info->opcode==eq_plus_prod){
-	                dinfo->dy=1.0;
-	            }
-	            else{
-	                dinfo->dy=-1.0;
-	            }
+            lGraph=new map<locint, EdgeBTree >;
+            if ((info->opcode==eq_plus_prod)||(info->opcode==eq_min_prod)){
+                dinfo->r=edge_index[edge_index_len+4];
+                dinfo->x=edge_index[edge_index_len+3];
+                dinfo->y=edge_index[edge_index_len+2];
+                dinfo->dx=1.0;
+                if (info->opcode==eq_plus_prod){
+                    dinfo->dy=1.0;
+                }
+                else{
+                    dinfo->dy=-1.0;
+                }
                 (*lAdjoints)[dinfo->r]=1.0;
-	            r=dinfo->r;
-	            compute_adjoints(dinfo,lAdjoints);
-	            dinfo->dx=0.0;dinfo->dy=0.0;
-	            dinfo->x=NULLLOC;dinfo->y=NULLLOC;
-	        }
-	        else{
+                r=dinfo->r;
+                compute_adjoints(dinfo,lAdjoints);
+                dinfo->dx=0.0;dinfo->dy=0.0;
+                dinfo->x=NULLLOC;dinfo->y=NULLLOC;
+            }
+            else{
                 (*lAdjoints)[info->r]=1.0;
-	            r=info->r;
-	        }
+                r=info->r;
+            }
 //edge_check_adjoints(Adjoints,10);
 //edge_check_graph(graph);
-	        break;
+            break;
         default:
-	        ; 
+            ; 
         }//switch
 //edge_check_info(info);
         if (info->r!=NULLLOC){
 //pushing
-	        compute_pushing(tl,tp,tw,info,lGraph);
+	        compute_pushing(tl, tp, tw, info, lGraph);
 //creating
-	        compute_creating(info,lAdjoints,lGraph);
+	        compute_creating(info, lAdjoints, lGraph);
 //adjointing
-	        compute_adjoints(info,lAdjoints);
+	        compute_adjoints(info, lAdjoints);
         }
 //edge_check_graph(lGraph);
 #endif
-    operation=get_op_r();
+        operation=get_op_r();
     }//while
 
 #ifdef PRE_ACC
 //edge_check_graph(lGraph);
-    compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
-    compute_global_creating(r,lGraph,Adjoints,graph);
-    compute_global_adjoints(r,lAdjoints,Adjoints);
+    compute_global_pushing(tl, tp, tw, r, lAdjoints, graph);
+    compute_global_creating(tl, tp, r, lGraph, Adjoints, graph);
+    compute_global_adjoints(r, lAdjoints, Adjoints);
     for(i=0;i<dl;i++){
         dinfo->r=dp[i];
-        compute_pushing(tl,tp,tw,dinfo,graph);
-        compute_adjoints(dinfo,Adjoints);
+        compute_pushing(tl, tp, tw, dinfo, graph);
+        compute_adjoints(dinfo, Adjoints);
     }
     dl=0;
 //edge_check_graph(graph);

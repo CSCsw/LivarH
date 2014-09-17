@@ -15,7 +15,7 @@ using namespace std;
 
 int __edge_is_symmetric__=1;
 
-void (*increase_edge)(int ,int ,double , map<locint, EdgeBTree>);
+void (*increase_edge)(int ,int ,double , map<locint, EdgeBTree*>);
 
 int edge_hess(
     short           tag,        /* tape identification                     */
@@ -43,7 +43,7 @@ int edge_hess(
         options[0]=1;
     }
 //    map<locint,map<locint,double> > *graph=new map<locint, map<locint, double> >;
-    map<locint, EdgeBTree> *graph = new map<locint, EdgeBTree>;
+    map<locint, EdgeBTree*> *graph = new map<locint, EdgeBTree*>;
     unsigned int *indmap;
     locint *edge_index;
     double *edge_value;
@@ -78,7 +78,11 @@ int edge_hess(
     }
 
 //Step 3: retrive results
-    edge_retrive(graph,indmap,nnz,rind,cind,values);
+    locint *tp = (locint*) malloc(sizeof(locint) * max_index);
+    double *tw = (double*) malloc(sizeof(double) * max_index);
+    edge_retrive(graph, indmap, nnz, rind, cind, values, tp, tw);
+    free(tp);
+    free(tw);
     delete[] indmap;
     delete[] edge_index;
     delete[] edge_value;
@@ -86,30 +90,26 @@ int edge_hess(
     return 1;
 }
 
-void edge_retrive(map<locint, EdgeBTree> *graph, unsigned int* indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values){
+void edge_retrive(map<locint, EdgeBTree*> *graph,
+                  unsigned int* indmap,
+                  int *nnz,
+                  unsigned int **rind,
+                  unsigned int **cind,
+                  double **values,
+                  locint *tp,
+                  double *tw){
     unsigned int n=0;
+    size_t size;
     EdgeBTree *edge;
-    for(map<locint, map<locint, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
+    for(map<locint, EdgeBTree* >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
     {
-        edge=&(ii->second);
-/*
-        for(map<locint, double>::iterator mi=edge->begin(); mi!=edge->end(); ++mi){
-            if (indmap[ii->first]>=indmap[mi->first]){
-                n++;
-            }
-        }
-*/
-        size_t size;
-        locint *ind;
-        double *weight;
-        edge->ToArray(&size, &ind, &weight);
+        edge=ii->second;
+        edge->ToArray(&size, tp, tw);
         for(size_t i = 0; i < size; ++i) {
-          if (indmap[ii->first] >= indmap[ind[i]]) {
+          if (indmap[ii->first] >= indmap[tp[i]]) {
             ++n;
           }
         }
-        free(ind);
-        free(weight);
     }
 //  cout<<"nnz="<<n<<endl;
     *nnz=n;
@@ -123,23 +123,18 @@ void edge_retrive(map<locint, EdgeBTree> *graph, unsigned int* indmap, int *nnz,
         *values=(double*)malloc(sizeof(double)*n);
     }
     n=0;
-    for(map<locint, map<locint, double> >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
+    for(map<locint, EdgeBTree* >::iterator ii=graph->begin(); ii!=graph->end(); ++ii)
     {
-        edge=&(ii->second);
-        size_t size;
-        locint *ind;
-        double *weight;
-        edge->ToArray(&size, &ind, &weight);
+        edge=ii->second;
+        edge->ToArray(&size, tp, tw);
         for(size_t i = 0; i < size; ++i) {
-          if (indmap[ii->first] >= indmap[ind[i]]) {
+          if (indmap[ii->first] >= indmap[tp[i]]) {
             (*rind)[n]=indmap[ii->first];
-            (*cind)[n]=indmap[mi->first];
-            (*values)[n]=mi->second;
+            (*cind)[n]=indmap[tp[i]];
+            (*values)[n]=tw[i];
             ++n;
           }
         }
-        free(ind);
-        free(weight);
     }
 }
 

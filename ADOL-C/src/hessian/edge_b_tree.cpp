@@ -65,6 +65,8 @@ EdgeBTree::EdgeBTree() {
   root_block = new EdgeBTreeBlock();
   root_block->is_leaf = true;
   size = 0;
+//  printf("in ctor[%x]\n", this);
+//  fflush(stdout);
 }
 
 EdgeBTree::~EdgeBTree() {
@@ -82,6 +84,8 @@ void EdgeBTree::erase(locint index) {
 }
 
 double* EdgeBTree::find(locint index) {
+//  printf("in find[%x]\n", this);
+//  fflush(stdout);
   EdgeBTreeBlock *prev_block = NULL;
   size_t prev_ind = 0;
   EdgeBTreeBlock *curr_block = root_block;
@@ -175,13 +179,17 @@ double* EdgeBTree::find(locint index) {
   }
 }
 
-void EdgeBTree::ToArray(size_t *len, locint **ind, double **weight) {
-  printf("size=%d\n", size);
-  fflush(stdout);
+void EdgeBTree::ToArrayAlloc(size_t *len, locint **ind, double **weight) {
   (*ind) = (locint*) malloc(sizeof(locint) * size);
   (*weight) = (double*) malloc(sizeof(double) * size);
+  ToArray(len, *ind, *weight);
+}
+
+void EdgeBTree::ToArray(size_t *len, locint *ind, double *weight) {
+//  printf("in ToArray[%x]\n", this);
+//  fflush(stdout);
   *len=0;
-  root_block->AppendToArray(len, *ind, *weight);
+  root_block->AppendToArray(len, ind, weight);
   if (*len != size) {
     fprintf(stderr, "FATAL ERROR: EdgeBTree Broken!\n");
     exit(-1);
