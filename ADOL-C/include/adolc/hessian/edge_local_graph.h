@@ -17,7 +17,7 @@ class EdgeLocalGraph {
   void insert(size_t row, locint ind, double w);
 
   void reset();
-  void erase(locint ind);
+  void erase(size_t ind);
 
   void Print();
   
