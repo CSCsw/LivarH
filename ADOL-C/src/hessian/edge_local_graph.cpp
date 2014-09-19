@@ -70,6 +70,7 @@ size_t EdgeLocalGraph::find(locint ind, locint* array, size_t curr_len) {
   if (ret == curr_len) {
     return NULLLOC;
   }
+  return ret;
 }
 
 void EdgeLocalGraph::insert(size_t row, locint ind, double w) {
