@@ -1,6 +1,6 @@
 #ifndef __EDGE_TAPE_H__
 #define __EDGE_TAPE_H__
-#include <adolc/adolc_settings.h>
+#include <adolc/internal/adolc_settings.h>
 /*  edge_tape.cpp */
 int edge_tape(  short tnum,         /* tape id */
                 int depcheck,       /* consistency chk on # of dependents */

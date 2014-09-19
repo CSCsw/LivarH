@@ -6,6 +6,7 @@
 #include <adolc/hessian/edge_graph.h>
 #include <adolc/hessian/edge_check.h>
 #include <adolc/hessian/edge_tape.h>
+#include <adolc/hessian/edge_local_graph.h>
 #include <cmath>
 #include "oplate.h"
 #include <adolc/adolc.h>

@@ -5,7 +5,7 @@
 #include <adolc/hessian/edge_check.h>
 //#define PRINT_CHECK_EDGES
 //#define PRINT_CHECK_GRAPH
-//#define PRINT_CHECK_INFO
+#define PRINT_CHECK_INFO
 //#define PRINT_CHECK_TAPE
 //#define PRINT_CHECK_ADJOINTS
 

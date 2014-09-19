@@ -47,8 +47,7 @@ void edge_pushing_pre_s(short           tnum,
     derivative_info* info=new derivative_info();
     map<locint, double> *Adjoints= new map<locint, double>;
 #ifdef PRE_ACC
-    map<locint, double> *lAdjoints= new map<locint, double>;
-    map<locint, map<locint, double> > *lGraph=new map<locint, map<locint, double> >;
+    EdgeLocalGraph *local_graph = new EdgeLocalGraph();
     derivative_info* dinfo=new derivative_info();
     dinfo->r=NULLLOC;dinfo->x=NULLLOC;dinfo->y=NULLLOC;
     dinfo->dx=0.0;dinfo->dy=0.0;
@@ -575,8 +574,8 @@ void edge_pushing_pre_s(short           tnum,
             compute_creating(info,Adjoints,graph);
 //adjointing
             compute_adjoints(info,Adjoints);
-//	edge_check_graph(graph);
-    }
+//edge_check_graph(graph);
+        }
 #endif
 
 #ifdef PRE_ACC
@@ -614,65 +613,62 @@ void edge_pushing_pre_s(short           tnum,
         case cond_assign_s:
 //push previous result to Global Trace
 //edge_check_graph(lGraph);
-	        compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
-	        compute_global_creating(r,lGraph,Adjoints,graph);
-	        compute_global_adjoints(r,lAdjoints,Adjoints);
+//            compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
+//            compute_global_creating(r,lGraph,Adjoints,graph);
+//            compute_global_adjoints(r,lAdjoints,Adjoints);
+            compute_global(tp, tw, local_graph, r, Adjoints, graph);
             for(i=0;i<dl;i++){
-	            dinfo->r=dp[i];
-	            compute_pushing(tl,tp,tw,dinfo,graph);
-	            compute_adjoints(dinfo,Adjoints);
+                dinfo->r=dp[i];
+                compute_pushing(tl,tp,tw,dinfo,graph);
+                compute_adjoints(dinfo,Adjoints);
             }
-	        dl=0;
-	        delete lAdjoints;
-	        delete lGraph;
-            lAdjoints=new map<locint, double>;
-            lGraph=new map<locint, map<locint, double> >;
-	        if ((info->opcode==eq_plus_prod)||(info->opcode==eq_min_prod)){
-	            dinfo->r=edge_index[edge_index_len+4];
-	            dinfo->x=edge_index[edge_index_len+3];
-	            dinfo->y=edge_index[edge_index_len+2];
-	            dinfo->dx=1.0;
-	            if (info->opcode==eq_plus_prod){
-	                dinfo->dy=1.0;
-	            }
-	            else{
-	                dinfo->dy=-1.0;
-	            }
-                (*lAdjoints)[dinfo->r]=1.0;
-	            r=dinfo->r;
-	            compute_adjoints(dinfo,lAdjoints);
-	            dinfo->dx=0.0;dinfo->dy=0.0;
-	            dinfo->x=NULLLOC;dinfo->y=NULLLOC;
-	        }
-	        else{
-                (*lAdjoints)[info->r]=1.0;
-	            r=info->r;
-	        }
+            dl=0;
+            local_graph->reset();
+            if ((info->opcode==eq_plus_prod)||(info->opcode==eq_min_prod)){
+                dinfo->r=edge_index[edge_index_len+4];
+                dinfo->x=edge_index[edge_index_len+3];
+                dinfo->y=edge_index[edge_index_len+2];
+                dinfo->dx=1.0;
+                if (info->opcode==eq_plus_prod){
+                    dinfo->dy=1.0;
+                }
+                else{
+                    dinfo->dy=-1.0;
+                }
+                size_t ind_r = local_graph->AddLiveVar(dinfo->r);
+                local_graph->adjoints[ind_r] = 1.0;
+                r=dinfo->r;
+                compute_local(tp, tw, dinfo, local_graph);
+                dinfo->dx=0.0;dinfo->dy=0.0;
+                dinfo->x=NULLLOC;dinfo->y=NULLLOC;
+            } else {
+                size_t ind_r = local_graph->AddLiveVar(info->r);
+                local_graph->adjoints[ind_r] = 1.0;
+                r=info->r;
+            }
 //edge_check_adjoints(Adjoints,10);
 //edge_check_graph(graph);
-	        break;
+            break;
         default:
-	        ; 
+            ; 
         }//switch
 //edge_check_info(info);
+//local_graph->Print();
         if (info->r!=NULLLOC){
-//pushing
-	        compute_pushing(tl,tp,tw,info,lGraph);
-//creating
-	        compute_creating(info,lAdjoints,lGraph);
-//adjointing
-	        compute_adjoints(info,lAdjoints);
+// compute pushing, creating, adjoints
+            compute_local(tp, tw, info, local_graph);
         }
-//edge_check_graph(lGraph);
+//local_graph->Print();
 #endif
-    operation=get_op_r();
+        operation=get_op_r();
     }//while
 
 #ifdef PRE_ACC
 //edge_check_graph(lGraph);
-    compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
-    compute_global_creating(r,lGraph,Adjoints,graph);
-    compute_global_adjoints(r,lAdjoints,Adjoints);
+//    compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
+//    compute_global_creating(r,lGraph,Adjoints,graph);
+//    compute_global_adjoints(r,lAdjoints,Adjoints);
+    compute_global(tp, tw, local_graph, r, Adjoints, graph);
     for(i=0;i<dl;i++){
         dinfo->r=dp[i];
         compute_pushing(tl,tp,tw,dinfo,graph);
@@ -681,8 +677,7 @@ void edge_pushing_pre_s(short           tnum,
     dl=0;
 //edge_check_graph(graph);
     delete dinfo;
-    delete lAdjoints;
-    delete lGraph;
+    delete local_graph;
     delete[] dp;
 #endif
     end_sweep();

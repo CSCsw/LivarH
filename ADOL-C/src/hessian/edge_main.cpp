@@ -15,8 +15,10 @@ using namespace std;
 
 int __edge_is_symmetric__=1;
 
-void (*increase_edge)(int ,int ,double , map<int, map<int,double> >*);
+//void (*increase_edge)(int ,int ,double , map<int, map<int,double> >*);
 
+int edge_count_global = 0;
+int edge_count_local = 0;
 int edge_hess(
     short           tag,        /* tape identification                     */
     int             dep,        /* consistency chk on # of dependents      */
@@ -52,6 +54,9 @@ int edge_hess(
 //Step 1: translate index, forward
     edge_tape(tag,dep,indep,basepoint,options[1],&indmap,&edge_index,&edge_value,&edge_index_len,&edge_value_len,&max_index);
 
+    edge_count_global = 0;
+    edge_count_local = 0;
+
 //Step 2: edge_pushing, reverse
     __edge_is_symmetric__=options[1];
     if (options[0]==0){
@@ -75,7 +80,8 @@ int edge_hess(
         fprintf(stderr, "Preaccumulation in Hessian must be enabled WITH --enable-preacc when configure\n");
 #endif
     }
-
+    printf("global edge count = %d\n", edge_count_global);
+    printf("local edge count = %d\n", edge_count_local);
 //Step 3: retrive results
     edge_retrive(graph,indmap,nnz,rind,cind,values);
     delete[] indmap;

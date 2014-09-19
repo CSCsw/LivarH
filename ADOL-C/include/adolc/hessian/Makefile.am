@@ -12,4 +12,4 @@
 
 libhessianincludedir      = $(pkgincludedir)/hessian
 
-libhessianinclude_HEADERS = edge_main.h edge_check.h edge_graph.h edge_tape.h edge_uni5_push.h
+libhessianinclude_HEADERS = edge_main.h edge_check.h edge_graph.h edge_tape.h edge_uni5_push.h edge_local_graph.h
