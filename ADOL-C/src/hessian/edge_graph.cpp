@@ -270,7 +270,8 @@ void compute_global(locint *tp,
     graph->erase(r);
 
     for(i=0;i<tl;i++){
-        p=tp[i];w=tw[i];
+      p=tp[i];w=tw[i];
+      if (w != 0.0) {
         if (p!=r){
 //loop all adjoints
             for(size_t ii = 0; ii< local_graph->size; ++ii) {
@@ -299,20 +300,23 @@ void compute_global(locint *tp,
               }
             }
         }
+      }
     }
 
     //creating
     w = (*Adjoints)[r];
     Adjoints->erase(r);
-    for(size_t ii = 0; ii < local_graph->size; ++ii) {
+    if (w != 0.0) {
+      for(size_t ii = 0; ii < local_graph->size; ++ii) {
         for(size_t jj =0; jj < local_graph->size_array[ii]; ++jj) {
             increase_edge(local_graph->loc[ii], local_graph->loc_array[ii][jj],
                           w * local_graph->hessian[ii][jj], graph);
         }
-    }
-    for(size_t ii = 0; ii< local_graph->size; ++ii) {
-      if(local_graph->adjoints[ii] != 0.0) {
-        (*Adjoints)[local_graph->loc[ii]] += w * local_graph->adjoints[ii];
+      }
+      for(size_t ii = 0; ii< local_graph->size; ++ii) {
+        if(local_graph->adjoints[ii] != 0.0) {
+          (*Adjoints)[local_graph->loc[ii]] += w * local_graph->adjoints[ii];
+        }
       }
     }
 }
