@@ -52,7 +52,7 @@ void edge_pushing_pre_s(short           tnum,
     dinfo->r=NULLLOC;dinfo->x=NULLLOC;dinfo->y=NULLLOC;
     dinfo->dx=0.0;dinfo->dy=0.0;
     dinfo->px=0.0;dinfo->py=0.0;dinfo->pxy=0.0;
-    locint *dp= new locint[max_index];
+    locint *dp= new locint[MAX_TEMP_ARRAY_SIZE];
     int dl=0;
     int r;
 #endif

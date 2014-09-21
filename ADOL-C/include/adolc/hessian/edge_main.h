@@ -11,6 +11,8 @@ using namespace std;
 
 #define NULLLOC UINT_MAX
 
+#define MAX_TEMP_ARRAY_SIZE 1000
+
 //#define NO_ASSING_BYPASS
 
 class derivative_info{
