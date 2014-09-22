@@ -58,7 +58,8 @@ void compute_pushing(unsigned int tl, locint *tp, double *tw, derivative_info* r
     }
 	if (ri->x!=NULLLOC){
         for(i=0;i<tl;i++){
-            p=tp[i];w=tw[i];
+          p=tp[i];w=tw[i];
+          if (w != 0.0) {
             if (ri->y!=-1){
                 if (p!=ri->r){
                     if (ri->x==p){
@@ -98,6 +99,7 @@ void compute_pushing(unsigned int tl, locint *tp, double *tw, derivative_info* r
                     increase_edge(ri->x,ri->x,ri->dx*ri->dx*w,graph);
                 }
             }
+          }
         }//for
 	}
 	else{
@@ -127,6 +129,9 @@ void compute_adjoints(derivative_info* ri, map<locint, double> *Adjoints){
     double w;
     w=(*Adjoints)[ri->r];
     Adjoints->erase(ri->r);
+    if (w == 0.0) {
+        return;
+    }
     if (ri->dx!=0.0){
         (*Adjoints)[ri->x]+=w*ri->dx;
     }
@@ -177,7 +182,8 @@ void compute_local(locint *tp,
     // pushing
     if (ri->x!=NULLLOC){
         for(i=0;i<tl;i++){
-            p=tp[i];w=tw[i];
+          p=tp[i];w=tw[i];
+          if (w != 0.0) {
             if (ri->y!=-1){
                 if (p!=ri->r){
                     if (ri->x==p){
@@ -217,6 +223,7 @@ void compute_local(locint *tp,
                     increase_local_edge(ri->x,ri->x,ri->dx*ri->dx*w,local_graph);
                 }
             }
+          }
         }//for
     }
     else{
