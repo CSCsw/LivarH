@@ -47,6 +47,7 @@ void edge_pushing_pre_s(short           tnum,
     derivative_info* info=new derivative_info();
     map<locint, double> *Adjoints= new map<locint, double>;
 #ifdef PRE_ACC
+    int edge_stmt_cnt = 0;
     EdgeLocalGraph *local_graph = new EdgeLocalGraph();
     derivative_info* dinfo=new derivative_info();
     dinfo->r=NULLLOC;dinfo->x=NULLLOC;dinfo->y=NULLLOC;
@@ -616,6 +617,7 @@ void edge_pushing_pre_s(short           tnum,
 //            compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
 //            compute_global_creating(r,lGraph,Adjoints,graph);
 //            compute_global_adjoints(r,lAdjoints,Adjoints);
+            ++edge_stmt_cnt;
             compute_global(tp, tw, local_graph, r, Adjoints, graph);
             for(i=0;i<dl;i++){
                 dinfo->r=dp[i];
@@ -676,6 +678,7 @@ void edge_pushing_pre_s(short           tnum,
     }
     dl=0;
 //edge_check_graph(graph);
+    printf("edge_stmt_cnt = %d\n", edge_stmt_cnt);
     delete dinfo;
     delete local_graph;
     delete[] dp;

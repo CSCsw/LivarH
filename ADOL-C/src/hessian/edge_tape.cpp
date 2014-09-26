@@ -220,7 +220,8 @@ int edge_tape(  short tnum,                         /* tape id */
         operation=get_op_f();
     }
     end_sweep();
-    printf("edge_tape_size=[%d]\n",edge_tape_size);
+    printf("edge_tape_size = %d\n",edge_tape_size);
+    printf("edge_op_size = %d\n", edge_op_cnt);
     fflush(stdout);
     tmp_index=edge_tape_size+1;
     edge_tape_size+=10;
@@ -1253,7 +1254,7 @@ Probably buggy :(
         /* Read the next operation */
         operation=get_op_f();
     }  /* endwhile */
-    free(dp_T0);
+    delete[] dp_T0;
     dp_T0 = NULL;
     end_sweep();
 printf("edge_value_len=%d\n",edge_value_len);
