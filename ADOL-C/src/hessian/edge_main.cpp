@@ -128,31 +128,3 @@ void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int* indmap
         }
     }
 }
-
-
-/*
-void increase_edge_a(int i,int j,double w,map<int, map<int,double> > *graph){
-//  printf("increase_edge <%d,%d><%10.10f>\n",i,j,w);
-  if (i!=j){
-    ADD_INC_EDGE_COUNT;
-    (*graph)[i][j]+=w;
-    ADD_INC_EDGE_COUNT;
-    (*graph)[j][i]+=w;
-  }
-  else{
-    ADD_INC_EDGE_COUNT;
-    (*graph)[i][j]+=w;
-  }
-}
-void increase_edge_s(int i,int j,double w,map<int, map<int,double> > *graph){
-//  printf("increase_edge <%d,%d><%10.10f>\n",i,j,w);
-  ADD_INC_EDGE_COUNT;
-  if (i>=j){
-    (*graph)[i][j]+=w;
-  }
-  else{
-    (*graph)[j][i]+=w;
-  }
-}
-*/
-
