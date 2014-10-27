@@ -6,7 +6,7 @@
 #include <adolc/hessian/edge_main.h>
 /*  edge_uni5_push.cpp */
 void edge_pushing_s(short           tnum,
-                    map<locint, map<locint,double> > *graph,
+                    std::map<locint, std::map<locint,double> > *graph,
                     locint*         edge_index,
                     double*         edge_value,
                     unsigned int    edge_index_len,
@@ -16,12 +16,12 @@ void edge_pushing_s(short           tnum,
 
 #ifdef PREACC
 void edge_pushing_pre_s(short           tnum,
-                    map<locint, map<locint,double> > *graph,
-                    locint*         edge_index,
-                    double*         edge_value,
-                    unsigned int    edge_index_len,
-                    unsigned int    edge_value_len,
-                    unsigned int    max_index
+                        std::map<locint, std::map<locint,double> > *graph,
+                        locint*         edge_index,
+                        double*         edge_value,
+                        unsigned int    edge_index_len,
+                        unsigned int    edge_value_len,
+                        unsigned int    max_index
 );
 #endif
 #endif

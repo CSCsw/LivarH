@@ -11,6 +11,8 @@
 #include <adolc/adolc.h>
 #include "taping_p.h"
 
+using namespace std;
+
 #define NO_PRE_ACC 1
 #include "edge_uni5_push.cpp"
 #undef NO_PRE_ACC

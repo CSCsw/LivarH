@@ -6,9 +6,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <adolc/hessian/edge_main.h>
+#include <adolc/hessian/edge_check.h>
 #include <adolc/hessian/edge_local_graph.h>
 #include <adolc/internal/adolc_settings.h>
 #include <adolc/adolc.h>
+
+using namespace std;
 
 #ifdef EDGE_DEBUG
 extern int edge_count_global;
@@ -248,7 +251,6 @@ void compute_global(locint *tp,
                     locint r,
                     map<locint, double> *Adjoints,
                     map<locint, map<locint, double> > *graph) {
-
     unsigned int i,j;
     map<locint, double> *edges;
     locint p;
@@ -259,7 +261,6 @@ void compute_global(locint *tp,
         tp[tl]=it->first;tw[tl]=it->second;tl++;
     }
     graph->erase(r);
-
     for(i=0;i<tl;i++){
       p=tp[i];w=tw[i];
       if (w != 0.0) {
@@ -282,10 +283,10 @@ void compute_global(locint *tp,
 //for all unordered set
             for(size_t ii = 0; ii < local_graph->size; ++ii) {
               if (local_graph->adjoints[ii] != 0.0) {
-                for(size_t jj =0; jj < local_graph->size; ++jj) {
+                for(size_t jj = ii; jj < local_graph->size; ++jj) {
                   if (local_graph->adjoints[jj] != 0.0) {
                       increase_edge(local_graph->loc[ii], local_graph->loc[jj],
-                                    local_graph->adjoints[ii]*local_graph->adjoints[jj], graph);
+                                    local_graph->adjoints[ii]*local_graph->adjoints[jj]*w, graph);
                   }
                 }
               }
@@ -293,13 +294,12 @@ void compute_global(locint *tp,
         }
       }
     }
-
     //creating
     w = (*Adjoints)[r];
     Adjoints->erase(r);
     if (w != 0.0) {
       for(size_t ii = 0; ii < local_graph->size; ++ii) {
-        for(size_t jj =0; jj < local_graph->size_array[ii]; ++jj) {
+        for(size_t jj = 0; jj < local_graph->size_array[ii]; ++jj) {
             increase_edge(local_graph->loc[ii], local_graph->loc_array[ii][jj],
                           w * local_graph->hessian[ii][jj], graph);
         }

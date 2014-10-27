@@ -3,9 +3,6 @@
 #include <map>
 #include <limits.h>
 #include <adolc/adolc.h>
-using namespace std;
-
-#define EDGE_DEBUG
 
 #define NOT_IMPLEMENTED_YET fprintf(stderr,"edge_hess: Not implemented yet\n");fflush(stderr);
 #define NULLLOC UINT_MAX
@@ -40,6 +37,6 @@ int edge_hess(
     int           *options     /* control options                         */
 );
 
-void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int *indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values);
+void edge_retrive(std::map<locint, std::map<locint, double> > *graph, unsigned int *indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values);
 
 #endif

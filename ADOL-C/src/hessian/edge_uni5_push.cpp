@@ -624,8 +624,8 @@ void edge_pushing_pre_s(short           tnum,
                 local_graph->adjoints[ind_r] = 1.0;
                 r=info->r;
             }
-//edge_check_adjoints(Adjoints,10);
 //edge_check_graph(graph);
+//edge_check_adjoints(Adjoints,10);
             break;
         default:
             ; 
@@ -642,10 +642,6 @@ void edge_pushing_pre_s(short           tnum,
     }//while
 
 #ifdef PRE_ACC
-//edge_check_graph(lGraph);
-//    compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
-//    compute_global_creating(r,lGraph,Adjoints,graph);
-//    compute_global_adjoints(r,lAdjoints,Adjoints);
     compute_global(tp, tw, local_graph, r, Adjoints, graph);
     for(i=0;i<dl;i++){
         dinfo->r=dp[i];
@@ -654,7 +650,11 @@ void edge_pushing_pre_s(short           tnum,
     }
     dl=0;
 //edge_check_graph(graph);
+//edge_check_adjoints(Adjoints,10);
+#ifdef EDGE_DEBUG
     printf("edge_stmt_cnt = %d\n", edge_stmt_cnt);
+#endif  // EDGE_DEBUG
+
     delete dinfo;
     delete local_graph;
     delete[] dp;

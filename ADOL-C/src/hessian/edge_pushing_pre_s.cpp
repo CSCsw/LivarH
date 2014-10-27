@@ -12,6 +12,8 @@
 #include <adolc/adolc.h>
 #include "taping_p.h"
 
+using namespace std;
+
 #ifdef PREACC
 
 #define PRE_ACC
