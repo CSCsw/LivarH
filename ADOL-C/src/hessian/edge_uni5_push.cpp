@@ -589,10 +589,7 @@ void edge_pushing_pre_s(short           tnum,
         case cond_assign:
         case cond_assign_s:
 //push previous result to Global Trace
-//edge_check_graph(lGraph);
-//            compute_global_pushing(tl,tp,tw,r,lAdjoints,graph);
-//            compute_global_creating(r,lGraph,Adjoints,graph);
-//            compute_global_adjoints(r,lAdjoints,Adjoints);
+//local_graph->Print();
             ++edge_stmt_cnt;
             compute_global(tp, tw, local_graph, r, Adjoints, graph);
             for(i=0;i<dl;i++){
@@ -642,6 +639,7 @@ void edge_pushing_pre_s(short           tnum,
     }//while
 
 #ifdef PRE_ACC
+//local_graph->Print();
     compute_global(tp, tw, local_graph, r, Adjoints, graph);
     for(i=0;i<dl;i++){
         dinfo->r=dp[i];

@@ -21,6 +21,7 @@ EdgeLocalGraph::EdgeLocalGraph() {
     size_array[i] = 0;
   }
   size = 0;
+  max_size = EDGE_LOCAL_SIZE;
 }
 
 EdgeLocalGraph::~EdgeLocalGraph() {
@@ -31,7 +32,6 @@ EdgeLocalGraph::~EdgeLocalGraph() {
   free(hessian[0]);
   free(loc_array);
   free(hessian);
-  size = 0;
 }
 
 void EdgeLocalGraph::reset() {
@@ -41,12 +41,51 @@ void EdgeLocalGraph::reset() {
   size = 0;
 }
 
+void EdgeLocalGraph::ExpandSize() {
+// Initialize new arrays
+  max_size = max_size * 2;
+  locint* n_loc = (locint*) malloc(sizeof(locint) * max_size);
+  double* n_adjoints = (double*) malloc(sizeof(double) * max_size);
+  size_t* n_size_array = (size_t*) malloc(sizeof(size_t) * max_size);
+  locint** n_loc_array = (locint**) malloc(sizeof(locint*) * max_size);
+  double** n_hessian = (double**) malloc(sizeof(double*) * max_size);
+  locint* n_l_tmp = (locint*) malloc(sizeof(locint) * max_size * max_size);
+  double* n_d_tmp = (double*) malloc(sizeof(double) * max_size * max_size);
+  for(size_t i = 0; i < max_size; i++) {
+    n_loc_array[i] = n_l_tmp;
+    n_hessian[i] = n_d_tmp;
+    n_l_tmp = n_l_tmp + max_size;
+    n_d_tmp = n_d_tmp + max_size;
+    n_size_array[i] = 0;
+  }
+// Copy values from old to new
+  for(size_t i = 0; i < size; i++) {
+    n_loc[i] = loc[i];
+    n_adjoints[i] = adjoints[i];
+    n_size_array[i] = size_array[i];
+    for(size_t j = 0; j < size_array[i]; j++) {
+      n_loc_array[i][j] = loc_array[i][j];
+      n_hessian[i][j] = hessian[i][j];
+    }
+  }
+// Deallocate old arrays
+  free(loc); loc = n_loc;
+  free(adjoints); adjoints = n_adjoints;
+  free(size_array); size_array = n_size_array;
+  free(loc_array[0]);
+  free(loc_array); loc_array = n_loc_array;
+  free(hessian[0]);
+  free(hessian); hessian = n_hessian;
+}
 size_t EdgeLocalGraph::AddLiveVar(locint ind) {
   if (ind == NULLLOC) {
     return NULLLOC;
   }
   size_t ret = find(ind, loc, size);
   if (ret == NULLLOC) {
+    if (size == max_size) {
+      ExpandSize();
+    }
     ret = size++;
     loc[ret] = ind;
     adjoints[ret] = 0.0;

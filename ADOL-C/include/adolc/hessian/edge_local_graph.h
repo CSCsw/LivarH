@@ -12,6 +12,7 @@ class EdgeLocalGraph {
   EdgeLocalGraph();
   ~EdgeLocalGraph();
 
+  void ExpandSize();
   size_t AddLiveVar(locint ind);
   size_t find(locint ind, locint* array, size_t size);
   void insert(size_t row, locint ind, double w);
@@ -22,6 +23,7 @@ class EdgeLocalGraph {
   void Print();
   
   size_t size;
+  size_t max_size;
   locint *loc;
   double *adjoints;
   
