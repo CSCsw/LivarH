@@ -1,27 +1,3 @@
-
-#ifdef ASYSMMETRIC_MATRIX
-#ifdef NO_PRE_ACC
-void edge_pushing_a(short           tnum,
-                    map<locint, map<locint,double> > *graph,
-                    locint*         edge_index,
-                    double*         edge_value,
-                    unsigned int    edge_index_len,
-                    unsigned int    edge_value_len,
-                    unsigned int    max_index
-){
-#endif
-#ifdef PRE_ACC
-void edge_pushing_pre_a(short           tnum,
-                    map<locint, map<locint,double> > *graph,
-                    locint*         edge_index,
-                    double*         edge_value,
-                    unsigned int    edge_index_len,
-                    unsigned int    edge_value_len,
-                    unsigned int    max_index
-){
-#endif
-#endif
-#ifdef SYSMMETRIC_MATRIX
 #ifdef NO_PRE_ACC
 void edge_pushing_s(short           tnum,
                     map<locint, map<locint,double> > *graph,
@@ -31,7 +7,8 @@ void edge_pushing_s(short           tnum,
                     unsigned int    edge_value_len,
                     unsigned int    max_index
 ){
-#endif
+#endif  // NO_PRE_ACC
+
 #ifdef PRE_ACC
 void edge_pushing_pre_s(short           tnum,
                     map<locint, map<locint,double> > *graph,
@@ -41,8 +18,7 @@ void edge_pushing_pre_s(short           tnum,
                     unsigned int    edge_value_len,
                     unsigned int    max_index
 ){
-#endif
-#endif
+#endif  // PRE_ACC
     unsigned char operation;
     derivative_info* info=new derivative_info();
     map<locint, double> *Adjoints= new map<locint, double>;

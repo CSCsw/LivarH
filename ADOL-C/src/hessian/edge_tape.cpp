@@ -13,69 +13,68 @@
 using namespace std;
 
 
-#define EDGE_TRANSLATE_INDEX    if (edge_translate_flag==1) {                                               \
-                                    edge_t_new_len=edge_value_len-1;                                        \
-					                if (edge_t_new_len>=edge_t_old_len) {                                   \
-                                        unsigned int i;                                                     \
-                                        for(i=edge_t_old_len;i<edge_t_new_len;i++){                         \
-                                            if (edge_index[i]!=NULLLOC)                                     \
-                                                edge_index[i]=edge_t_index[edge_index[i]];                  \
-                                        }                                                                   \
-                                        edge_t_index[edge_index[edge_t_new_len]]=edge_t_cur_index;          \
-                                        edge_index[edge_t_new_len]=edge_t_cur_index;                        \
-                                        edge_t_cur_index++;                                                 \
-                                    }                                                                       \
-                                    edge_t_old_len=edge_value_len;                                          \
-                                }
+#define EDGE_TRANSLATE_INDEX    \
+{                                                                \
+  edge_t_new_len = edge_value_len - 1;                           \
+  if (edge_t_new_len >=edge_t_old_len) {                        \
+    unsigned int i;                                              \
+    for(i = edge_t_old_len; i < edge_t_new_len; i++){            \
+      if (edge_index[i] != NULLLOC)                              \
+        edge_index[i] = edge_t_index[edge_index[i]];             \
+    }                                                            \
+    edge_t_index[edge_index[edge_t_new_len]] = edge_t_cur_index; \
+    edge_index[edge_t_new_len] = edge_t_cur_index;               \
+    edge_t_cur_index++;                                          \
+  }                                                              \
+  edge_t_old_len=edge_value_len;                                 \
+}
 
 
-#define EDGE_TRANSLATE_INDEPENDENT  if (edge_translate_flag==1){                                            \
-                                        edge_t_new_len=edge_value_len-1;                                    \
-                                        edge_t_index[edge_index[edge_t_new_len]]=edge_t_cur_index;          \
-                                        edge_index[edge_t_new_len]=edge_t_cur_index;                        \
-                                        indmap[edge_t_cur_index]=indexi++;                                  \
-                                        edge_t_cur_index++;                                                 \
-                                        edge_t_old_len=edge_value_len;                                      \
-                                    }                                                                       \
-                                    else{                                                                   \
-                                        indmap[res]=indexi++;                                               \
-                                    }
+#define EDGE_TRANSLATE_INDEPENDENT  \
+{                                                                \
+  edge_t_new_len = edge_value_len - 1;                           \
+  edge_t_index[edge_index[edge_t_new_len]] = edge_t_cur_index;   \
+  edge_index[edge_t_new_len] = edge_t_cur_index;                 \
+  indmap[edge_t_cur_index] = indexi++;                           \
+  edge_t_cur_index++;                                            \
+  edge_t_old_len = edge_value_len;                               \
+}
 
 
 //For hessian, there is a unique dependent variable
-#define EDGE_TRANSLATE_DEPENDENT    if (edge_translate_flag==1){                                            \
-                                        edge_t_new_len=edge_value_len-1;                                    \
-                                        edge_index[edge_t_new_len]=edge_t_index[edge_index[edge_t_new_len]];\
-                                    }
+#define EDGE_TRANSLATE_DEPENDENT  \
+{                                                                         \
+  edge_t_new_len = edge_value_len - 1;                                    \
+  edge_index[edge_t_new_len] = edge_t_index[edge_index[edge_t_new_len]];  \
+}
 
 
 
-int edge_tape(  short tnum,                         /* tape id */
-                int depcheck,                       /* consistency chk on # of dependents */
-                int indcheck,                       /* consistency chk on # of independents */
-                const double*   basepoint,          /* independent variable values */
-                int             edge_translate_flag,/* 1=Translate the index or not */
-                unsigned int**  indmap_p,           /* Mapping from location to independent index */
-                locint**        edge_index_p,       /* The translated index (increasing) */
-                double**        edge_value_p,       /* The value of variables (for reverse) */
-                unsigned int*   edge_index_len_p,   /* The length of edge_index[] */
-                unsigned int*   edge_value_len_p,   /* The length of edge_value[] */
-                locint*         max_index_p)        /* The max index (after translation)    */
+int edge_tape(short tnum,                         /* tape id */
+              int depcheck,                       /* consistency chk on # of dependents */
+              int indcheck,                       /* consistency chk on # of independents */
+              const double*   basepoint,          /* independent variable values */
+              unsigned int**  indmap_p,           /* Mapping from location to independent index */
+              locint**        edge_index_p,       /* The translated index (increasing) */
+              double**        edge_value_p,       /* The value of variables (for reverse) */
+              unsigned int*   edge_index_len_p,   /* The length of edge_index[] */
+              unsigned int*   edge_value_len_p,   /* The length of edge_value[] */
+              locint*         max_index_p)        /* The max index (after translation)    */
 {
     unsigned int edge_t_new_len;
     unsigned int edge_t_old_len;
     unsigned int *edge_t_index;
     locint edge_t_cur_index;
-    int ret_val=1;
+    int ret_val = 1;
     int max_tmp;
     unsigned char operation;
     unsigned int* indmap;
     locint *edge_index;
     double *edge_value;
-    unsigned int edge_index_len=0;
-    unsigned int edge_value_len=0;
-    locint max_index=0;
-    locint tmp_index=0;
+    unsigned int edge_index_len = 0;
+    unsigned int edge_value_len = 0;
+    locint max_index = 0;
+    locint tmp_index = 0;
 
     locint size = 0;
     locint res  = 0;
@@ -220,9 +219,12 @@ int edge_tape(  short tnum,                         /* tape id */
         operation=get_op_f();
     }
     end_sweep();
+#ifdef EDGE_DEBUG
     printf("edge_tape_size = %d\n",edge_tape_size);
     printf("edge_op_size = %d\n", edge_op_cnt);
     fflush(stdout);
+#endif  // EDGE_DEBUG
+
     tmp_index=edge_tape_size+1;
     edge_tape_size+=10;
     max_index=edge_tape_size;
@@ -234,10 +236,8 @@ int edge_tape(  short tnum,                         /* tape id */
     edge_t_old_len=0;
     edge_t_new_len=0;
     edge_t_cur_index=0;
-    if (edge_translate_flag==1){
-      edge_t_index=new locint[edge_tape_size];
-      for(i=0;i<edge_tape_size;i++){edge_t_index[i]=0;}
-    }
+    edge_t_index=new locint[edge_tape_size];
+    for(i=0;i<edge_tape_size;i++){edge_t_index[i]=0;}
 
     /* globals */
     edge_value=new double[edge_tape_size];
@@ -1257,11 +1257,10 @@ Probably buggy :(
     delete[] dp_T0;
     dp_T0 = NULL;
     end_sweep();
-printf("edge_value_len=%d\n",edge_value_len);
-    if (edge_translate_flag==1){
-//      edge_check_index(edge_index,edge_index_len);
-      delete[] edge_t_index;
-    }
+#ifdef EDGE_DEBUG
+    printf("edge_value_len=%d\n",edge_value_len);
+#endif  // EDGE_EDBUG
+    delete[] edge_t_index;
     *edge_index_p=edge_index;
     *edge_value_p=edge_value;
     *edge_index_len_p=edge_index_len;

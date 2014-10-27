@@ -8,14 +8,11 @@
 #include <adolc/hessian/edge_tape.h>
 #include <adolc/hessian/edge_uni5_push.h>
 
-
+#ifdef EDGE_DEBUG
 #define ADD_INC_EDGE_COUNT	if (edge_is_local==0) { local_inc_edge_count++;} else {global_inc_edge_count++;}
+#endif // EDGE_DEBUG
 
 using namespace std;
-
-int __edge_is_symmetric__=1;
-
-//void (*increase_edge)(int ,int ,double , map<int, map<int,double> >*);
 
 int edge_count_global = 0;
 int edge_count_local = 0;
@@ -29,20 +26,21 @@ int edge_hess(
     unsigned int**  cind,       /* column index                            */
     double**        values,     /* non-zero values                         */
     int*            options     /* control options                         */
-                                /* options[0]=0,    disable statement preaccumulation    */
-                                /*           =1,    enable  statement preaccumulation    */
+                                /* options[0]=0,    disable statement preaccumulation */
+                                /*           =1,    enable  statement preaccumulation */
+                                /* options[1], DEPRECATED, FIXED as 1      */
                                 /* options[1]=0,    ADOL-C indexing        */
                                 /*           =1,    Monotonic indesing     */
 
 )
 {
-    if ((options[0]!=0) && (options[0]!=1)){
-        fprintf(stderr,"Edge_Hess requires options[0]=0 or 1 (Default is 0)\n");
+    if (options[0] != 0 && options[0] != 1){
+        fprintf(stderr,"edge_hess: options[0] should be 0 or 1 (Default is 0).\n");
         options[0]=0;
     }
-    if ((options[1]!=0) && (options[1]!=1)){
-        fprintf(stderr,"Edge_Hess requires options[1]=0 or 1 (Default is 1)\n");
-        options[0]=1;
+    if (options[1] != 1){
+        fprintf(stderr,"edge_hess: options[1] deprecated (Fixed as 1).\n");
+        options[1]=1;
     }
     map<locint,map<locint,double> > *graph=new map<locint, map<locint, double> >;
     unsigned int *indmap;
@@ -52,36 +50,29 @@ int edge_hess(
     unsigned int edge_value_len;
     unsigned int max_index;
 //Step 1: translate index, forward
-    edge_tape(tag,dep,indep,basepoint,options[1],&indmap,&edge_index,&edge_value,&edge_index_len,&edge_value_len,&max_index);
+    edge_tape(tag,dep,indep,basepoint,&indmap,&edge_index,&edge_value,&edge_index_len,&edge_value_len,&max_index);
 
     edge_count_global = 0;
     edge_count_local = 0;
 
 //Step 2: edge_pushing, reverse
-    __edge_is_symmetric__=options[1];
     if (options[0]==0){
-        if (options[1]==0){
-            edge_pushing_a(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
-        }
-        else{
-            edge_pushing_s(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
-        }
+      edge_pushing_s(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
     }
     else{
 #ifdef PREACC
-        if (options[1]==0){
-            edge_pushing_pre_a(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
-        }
-        else{
-            edge_pushing_pre_s(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
-        }
+      edge_pushing_pre_s(tag,graph,edge_index,edge_value,edge_index_len,edge_value_len,max_index);
 #endif
 #ifndef PREACC
-        fprintf(stderr, "Preaccumulation in Hessian must be enabled WITH --enable-preacc when configure\n");
+      fprintf(stderr, "Preaccumulation in Hessian must be enabled WITH --enable-preacc when configure ADOL-C.\n");
 #endif
     }
+
+#ifdef EDGE_DEBUG
     printf("global edge count = %d\n", edge_count_global);
     printf("local edge count = %d\n", edge_count_local);
+#endif  // EDGE_DEBUG
+
 //Step 3: retrive results
     edge_retrive(graph,indmap,nnz,rind,cind,values);
     delete[] indmap;
@@ -103,7 +94,6 @@ void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int* indmap
             }
         }
     }
-//  cout<<"nnz="<<n<<endl;
     *nnz=n;
     if (*rind==NULL){
         *rind=(unsigned int*)malloc(sizeof(unsigned int)*n);

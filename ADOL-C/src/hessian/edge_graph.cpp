@@ -10,33 +10,22 @@
 #include <adolc/internal/adolc_settings.h>
 #include <adolc/adolc.h>
 
-extern int __edge_is_symmetric__;
-
+#ifdef EDGE_DEBUG
 extern int edge_count_global;
 extern int edge_count_local;
+#endif  // EDGE_DEBUG
 
 void increase_edge(locint i, locint j, double w, map<locint, map<locint, double> > *graph){
+#ifdef EDGE_DEBUG
     edge_count_global++;
-    if (__edge_is_symmetric__==0){
-        if (i!=j){
-            (*graph)[i][j]+=w;
-            (*graph)[j][i]+=w;
-        }
-        else{
-            (*graph)[i][j]+=w;
-        }
+#endif  // EDGE_DEBUG
+    if (i>=j){
+        (*graph)[i][j]+=w;
     }
     else{
-        if (i>=j){
-            (*graph)[i][j]+=w;
-        }
-        else{
-            (*graph)[j][i]+=w;
-        }
+        (*graph)[j][i]+=w;
     }
 }
-
-
 
 void compute_pushing(unsigned int tl, locint *tp, double *tw, derivative_info* ri, map<locint,map<locint, double> > *graph){
     unsigned int i;
@@ -49,13 +38,7 @@ void compute_pushing(unsigned int tl, locint *tp, double *tw, derivative_info* r
     for (std::map<locint,double>::iterator it=edges->begin(); it!=edges->end(); it++){
         tp[tl]=it->first;tw[tl]=it->second;tl++;
     }
-//get rid of symmetric term
-	graph->erase(ri->r);
-    if (__edge_is_symmetric__==0){
-        for(i=0;i<tl;i++){
-	        (*graph)[tp[i]].erase(ri->r);
-        }
-    }
+    graph->erase(ri->r);
 	if (ri->x!=NULLLOC){
         for(i=0;i<tl;i++){
           p=tp[i];w=tw[i];
@@ -144,7 +127,9 @@ void compute_adjoints(derivative_info* ri, map<locint, double> *Adjoints){
 #ifdef PREACC
 
 void increase_local_edge(locint i, locint j, double w, EdgeLocalGraph *local_graph){
+#ifdef EDGE_DEBUG
     edge_count_local++;
+#endif  // EDGE_DEBUG
     size_t ind;
     if (i>=j){
       ind = local_graph->AddLiveVar(i);
@@ -273,7 +258,6 @@ void compute_global(locint *tp,
     for (std::map<locint,double>::iterator it=edges->begin(); it!=edges->end(); it++){
         tp[tl]=it->first;tw[tl]=it->second;tl++;
     }
-//get rid of symmetric term
     graph->erase(r);
 
     for(i=0;i<tl;i++){

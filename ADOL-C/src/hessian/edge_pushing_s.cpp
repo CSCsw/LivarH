@@ -11,8 +11,6 @@
 #include <adolc/adolc.h>
 #include "taping_p.h"
 
-#define SYSMMETRIC_MATRIX 1
 #define NO_PRE_ACC 1
 #include "edge_uni5_push.cpp"
-#undef SYSMMETRIC_MATRIX
 #undef NO_PRE_ACC

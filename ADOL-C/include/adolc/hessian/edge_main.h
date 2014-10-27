@@ -5,15 +5,11 @@
 #include <adolc/adolc.h>
 using namespace std;
 
-/* timing utility */
+#define EDGE_DEBUG
 
-#define NOT_IMPLEMENTED_YET fprintf(stderr,"Edge_Hess: Not implemented yet\n");fflush(stderr);
-
+#define NOT_IMPLEMENTED_YET fprintf(stderr,"edge_hess: Not implemented yet\n");fflush(stderr);
 #define NULLLOC UINT_MAX
-
 #define MAX_TEMP_ARRAY_SIZE 1000
-
-//#define NO_ASSING_BYPASS
 
 class derivative_info{
   public:
@@ -31,7 +27,6 @@ class derivative_info{
     ~derivative_info(){};
 };
 
-
 /*  edge_main.cpp */
 int edge_hess(
     short          tag,        /* tape identification                     */
@@ -46,8 +41,5 @@ int edge_hess(
 );
 
 void edge_retrive(map<locint, map<locint, double> > *graph, unsigned int *indmap, int *nnz, unsigned int **rind, unsigned int **cind, double **values);
-
-//void increase_edge_a(int i,int j,double w,map<int, map<int,double> > *graph);
-//void increase_edge_s(int i,int j,double w,map<int, map<int,double> > *graph);
 
 #endif

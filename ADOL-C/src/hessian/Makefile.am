@@ -18,5 +18,5 @@ MAINTAINERCLEANFILES     = Makefile.in *~ *.orig
 
 noinst_LTLIBRARIES       = libhessian.la
 
-libhessian_la_SOURCES     = edge_main.cpp edge_graph.cpp edge_tape.cpp edge_check.cpp edge_pushing_a.cpp edge_pushing_s.cpp edge_pushing_pre_a.cpp edge_pushing_pre_s.cpp edge_local_graph.cpp
+libhessian_la_SOURCES     = edge_main.cpp edge_graph.cpp edge_tape.cpp edge_check.cpp edge_pushing_s.cpp edge_pushing_pre_s.cpp edge_local_graph.cpp
 
