@@ -1,3 +1,22 @@
+ADOL-C 2.5.2 with LivarH.
+When to use LivarH, include "adolc/hessian/edge_main.h" in the header file.
+Then after tracing the objective function using ADOL-C trace_on()/trace_off(),
+call the following function to evaluate the Hessian using LivarH.
+For more information, refer to "src/hessian/edge_main.cpp".
+
+int edge_hess( 
+    short          tag,        /* tape identification                     */ 
+    int            dep,        /* consistency chk on # of dependents      */ 
+    int            indep,      /* number of independent variables         */ 
+    const double  *basepoint,  /* independant variable values             */ 
+    int           *nnz,        /* number of nonzeros                      */ 
+    unsigned int **rind,       /* row index                               */
+    unsigned int **cind,       /* column index                            */
+    double       **values,     /* non-zero values                         */
+    int           *options     /* control options                         */
+);
+
+
 
      ADOL-C
 
