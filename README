@@ -14,6 +14,9 @@ int edge_hess(
     unsigned int **cind,       /* column index                            */
     double       **values,     /* non-zero values                         */
     int           *options     /* control options                         */
+                               /* options[0] = 0 (Default) LivarH         */
+                               /*            = 1 LivarHAcc (preaccumulation) */
+                               /* options[1] = 0 Deprecated               */
 );
 
 A Simple installation guide (GNU toolchain required):
