@@ -16,7 +16,21 @@ int edge_hess(
     int           *options     /* control options                         */
 );
 
+A Simple installation guide (GNU toolchain required):
+1. Installing ColPack
+1.1: Download ColPack from https://github.com/CSCsw/ColPack
+1.2: Run "autoreconf --install"
+1.3: Run "automake"
+1.4: Configure the ColPack with "./configure --prefix=$ColPackHome", where "$ColPackHome" is the directory you want to put ColPack at.
+1.5: Run "make;make install"
 
+2. Install ADOL-C with LivarH
+2.1: Download ADOL-C from https://github.com/CSCsw/LivarH
+2.2: Run "autoreconf --install"
+2.3: Run "automake"
+2.4: Configure the ADOL-C with "./configure --prefix=$ADOLCHOME --enable-sparse --with-colpack=$ColPackHOME --enable-addexa"
+2.5: Run "make;make install"
+2.6: Check your installation: go to "./ADOL-C/examples/additional_examples", check if "sparse_jacobian" and "sparse_hessian" are functional. 
 
      ADOL-C
 
