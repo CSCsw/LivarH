@@ -1,4 +1,4 @@
-ADOL-C 2.5.2 with LivarH.
+##ADOL-C 2.5.2 with LivarH.
 When to use LivarH, include "adolc/hessian/edge_main.h" in the header file.
 Then after tracing the objective function using ADOL-C trace_on()/trace_off(),
 call the following function to evaluate the Hessian using LivarH.
@@ -19,7 +19,7 @@ int edge_hess(
                                /* options[1] = 0 Deprecated               */
 );
 
-A Simple installation guide (GNU toolchain required):
+##A Simple installation guide (GNU toolchain required):
 1. Installing ColPack
 1.1: Download ColPack from https://github.com/CSCsw/ColPack
 1.2: Run "autoreconf --install"
@@ -35,7 +35,9 @@ A Simple installation guide (GNU toolchain required):
 2.5: Run "make;make install"
 2.6: Check your installation: go to "./ADOL-C/examples/additional_examples", check if "sparse_jacobian" and "sparse_hessian" are functional. 
 
-     ADOL-C
+
+
+## ADOL-C (Native ADOL-C README)
 
 This new version of ADOL-C features new library functions for
 
