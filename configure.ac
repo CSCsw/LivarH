@@ -501,11 +501,13 @@ AC_CONFIG_FILES(Makefile
                 ADOL-C/include/adolc/sparse/Makefile
                 ADOL-C/include/adolc/tapedoc/Makefile
 		ADOL-C/include/adolc/hessian/Makefile
+		ADOL-C/include/adolc/hypertensor/Makefile
                 ADOL-C/src/Makefile
                 ADOL-C/src/drivers/Makefile 
                 ADOL-C/src/sparse/Makefile
                 ADOL-C/src/tapedoc/Makefile
 		ADOL-C/src/hessian/Makefile
+		ADOL-C/src/hypertensor/Makefile
                 ADOL-C/doc/version.tex
                 ADOL-C/examples/Makefile
                 ADOL-C/examples/additional_examples/Makefile
