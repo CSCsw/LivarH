@@ -1,13 +1,14 @@
 #ifndef __HYPER_GRAPH_H__
 #define __HYPER_GRAPH_H__
 
-class MatrixGraph;
+template <typename T> class MatrixGraph;
 
+template <typename T>
 class HyperGraph {
  public:
-  virtual void increase(int x, int y, int z, double v) = 0;
-  virtual MatrixGraph* get_and_erase(int x) = 0;
-  virtual MatrixGraph* get(int x) = 0;
+  virtual void increase(T x, T y, T z, double v) = 0;
+  virtual MatrixGraph<T>* get_and_erase(T x) = 0;
+  virtual MatrixGraph<T>* get(T x) = 0;
 };
 
 #endif // __HYPER_GRAPH_H__

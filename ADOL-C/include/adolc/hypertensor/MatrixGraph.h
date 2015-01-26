@@ -1,13 +1,14 @@
 #ifndef __MATRIX_GRAPH_H__
 #define __MATRIX_GRAPH_H__
 
-class VectorGraph;
+template <typename T> class VectorGraph;
 
+template <typename T>
 class MatrixGraph {
  public:
-  virtual void increase(int x, int y, double v) = 0;
-  virtual VectorGraph* get_and_erase(int x) = 0;
-  virtual VectorGraph* get(int x) = 0;
+  virtual void increase(T x, T y, double v) = 0;
+  virtual VectorGraph<T>* get_and_erase(T x) = 0;
+  virtual VectorGraph<T>* get(T x) = 0;
 };
 
 #endif // __MATRIX_GRAPH_H__

@@ -18,4 +18,4 @@ MAINTAINERCLEANFILES     = Makefile.in *~ *.orig
 
 noinst_LTLIBRARIES       = libhypertensor.la
 
-libhypertensor_la_SOURCES = VectorGraphMap.cpp MatrixGraphMap.cpp HyperGraphMap.cpp hyper_main.cpp
+libhypertensor_la_SOURCES = hyper_tensor.cpp

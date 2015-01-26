@@ -4,7 +4,7 @@
 template <typename T>
 class VectorGraph {
  public:
-  virtual void increase(T x, T v) = 0;
+  virtual void increase(T x, double v) = 0;
   virtual double get_and_erase(T x) = 0;
   virtual double get(T x) = 0; 
 };
