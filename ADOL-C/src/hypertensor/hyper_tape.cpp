@@ -1,15 +1,36 @@
 #include <vector>
 #include <map>
+#include <iostream>
+#include <cmath>
 
+#include "oplate.h"
+#include <adolc/adalloc.h>
+#include <adolc/interfaces.h>
+#include "taping_p.h"
+#include <adolc/hypertensor/hyper_tape.h>
+
+#define TRANSLATE_ARG(arg) (index_translate[arg])
+#define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
+
+#define TRANSLATE_IND(ind) TRANSLATE_RES(ind)
+#define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
+
+locint translate_result(std::map<locint, locint>& index_translate,
+                               locint& max_ind,
+                               locint res) {
+  max_ind += 1;
+  index_translate[res] = max_ind;
+  return max_ind;
+}
 
 int hyper_tape(short tag,
-               int dep,
-               int indep,
+               int depcheck,
+               int indcheck,
                const double* basepoint,
-               std::map<int, int> ind_map,
-               std::vector<int>& hyper_index,
+               std::map<locint, locint>& ind_map,
+               std::vector<locint>& hyper_index,
                std::vector<double>& hyper_value) {
-
+  std::cout << "In hyper_tape" << std::endl;
   unsigned char opcode;
   locint size = 0;
   locint res = 0;
@@ -17,16 +38,22 @@ int hyper_tape(short tag,
   locint arg1 = 0;
   locint arg2 = 0;
   double coval = 0;
-  
-  init_for_sweep(tnum);
+  double* d = NULL;
+  int i;
+
+  locint index_ind = 0;
+  locint max_ind = 0;
+  std::map<locint, locint> index_translate; 
+
+  init_for_sweep(tag);
 
   if ((depcheck != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS]) ||
      (indcheck != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) ) {
-    fprintf(DIAG_OUT,"ADOL-C error: Tape_doc on tape %d  aborted!\n",tnum);
+    fprintf(DIAG_OUT,"ADOL-C error: Tape_doc on tape %d  aborted!\n",tag);
     fprintf(DIAG_OUT,"Number of dependent (%d) and/or independent (%d) "
             "variables passed to Tape_doc is\ninconsistent with "
             "number recorded on tape %d (%d:%d)\n", depcheck,
-            indcheck, tnum, (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS],
+            indcheck, tag, (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS],
             (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]);
     exit (-1);
   }
@@ -62,7 +89,7 @@ int hyper_tape(short tag,
       
       // ASSIGNMENTS
       case assign_a:
-        arg = get_locinf_f();
+        arg = get_locint_f();
         res = get_locint_f();
         dp_T0[res] = dp_T0[arg];
         hyper_index.push_back(TRANSLATE_ARG(arg));
@@ -80,9 +107,422 @@ int hyper_tape(short tag,
         res = get_locint_f();
         dp_T0[res] = 1.0;
         hyper_index.push_back(TRANSLATE_RES(res));
-        hyper_index.push_back(TRANSLATE_ 
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case assign_d_zero:
+        res = get_locint_f();
+        dp_T0[res] = 0.0;
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case assign_ind:
+        res = get_locint_f();
+        dp_T0[res] = basepoint[index_ind++];
+        hyper_index.push_back(TRANSLATE_IND(res));
+        hyper_value.push_back(dp_T0[res]);
+        std::cout << res << " I--> " << index_translate[res] << std::endl;
+        break;
+      case assign_dep:
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_DEP(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case eq_plus_d:
+        res = get_locint_f();
+        coval = get_val_f();
+        dp_T0[res] += coval;
+        break;
+      case eq_plus_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_ARG(res));
+        hyper_value.push_back(dp_T0[res]);
+        dp_T0[res] += dp_T0[arg];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case eq_min_d:
+        res = get_locint_f();
+        coval = get_val_f();
+        dp_T0[res] -= coval;
+        break;
+      case eq_min_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_ARG(res));
+        hyper_value.push_back(dp_T0[res]);
+        dp_T0[res] -= dp_T0[arg];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case eq_mult_d:
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(NULLLOC);
+        hyper_value.push_back(coval);
+        hyper_index.push_back(TRANSLATE_ARG(res));
+        hyper_value.push_back(dp_T0[res]);
+        dp_T0[res] *= coval;
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case eq_mult_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_ARG(res));
+        hyper_value.push_back(dp_T0[res]);
+        dp_T0[res] *= dp_T0[arg];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case incr_a:
+        res = get_locint_f();
+        dp_T0[res]++;
+        break;
+      case decr_a:
+        res = get_locint_f();
+        dp_T0[res]--;
+        break;
+      case plus_a_a:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_ARG(arg2));
+        hyper_value.push_back(dp_T0[arg2]);
+        dp_T0[res] = dp_T0[arg1] + dp_T0[arg2];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        std::cout << arg1 << " ---> " << index_translate[arg1] << std::endl;
+        std::cout << arg2 << " ---> " << index_translate[arg2] << std::endl;
+        std::cout << res << " ---> " << index_translate[res] << std::endl;
+
+        break;
+      case plus_d_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = dp_T0[arg] + coval;
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case min_a_a:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_ARG(arg2));
+        hyper_value.push_back(dp_T0[arg2]);
+        dp_T0[res] = dp_T0[arg1] - dp_T0[arg2];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case min_d_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = coval - dp_T0[arg];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case mult_a_a:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_ARG(arg2));
+        hyper_value.push_back(dp_T0[arg2]);
+        dp_T0[res] = dp_T0[arg1] * dp_T0[arg2];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case mult_d_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = coval * dp_T0[arg];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case div_a_a:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_ARG(arg2));
+        hyper_value.push_back(dp_T0[arg2]);
+        dp_T0[res] = dp_T0[arg1] / dp_T0[arg2];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case div_d_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = coval / dp_T0[arg];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case pos_sign_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = dp_T0[arg];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case neg_sign_a:
+        arg = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = -dp_T0[arg];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case exp_op:
+        arg = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = exp(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case log_op:
+        arg = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = log(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case pow_op:
+        arg = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(NULLLOC);
+        hyper_value.push_back(coval);
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = pow(dp_T0[arg], coval);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case sqrt_op:
+        arg = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = sqrt(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case sin_op:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        dp_T0[res] = sin(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case cos_op:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        dp_T0[res] = cos(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case atan_op:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        dp_T0[res] = atan(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case asin_op:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        dp_T0[res] = asin(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case acos_op:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        dp_T0[res] = acos(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case min_op:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_ARG(arg2));
+        hyper_value.push_back(dp_T0[arg2]);
+        if (dp_T0[arg1] > dp_T0[arg2])
+          dp_T0[res] = dp_T0[arg2];
+        else
+          dp_T0[res] = dp_T0[arg1];
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case abs_val:
+        arg = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        dp_T0[res] = fabs(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case ceil_op:
+        arg = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        dp_T0[res] = ceil(dp_T0[arg]);
+        break;
+      case floor_op:
+        arg = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        dp_T0[res] = floor(dp_T0[arg]);
+        break;
+      case cond_assign:
+        arg = get_locint_f();
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        hyper_index.push_back(TRANSLATE_ARG(arg2));
+        hyper_value.push_back(dp_T0[arg2]);
+        if (dp_T0[arg]>0) {
+          if (coval<=0){
+            fprintf(DIAG_OUT,"Inconsistency in cond_assign. Retape?\n");
+          }
+          dp_T0[res]=dp_T0[arg1];
+        } else {
+          if (coval>0){
+            fprintf(DIAG_OUT,"Inconsistency in cond_assign. Retape?\n");
+          }
+          dp_T0[res]=dp_T0[arg2];
+        }
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+      case cond_assign_s:
+        arg = get_locint_f();
+        arg1 = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        hyper_index.push_back(TRANSLATE_ARG(arg));
+        hyper_value.push_back(dp_T0[arg]);
+        hyper_index.push_back(TRANSLATE_ARG(arg1));
+        hyper_value.push_back(dp_T0[arg1]);
+        if (dp_T0[arg] > 0 ) {
+          if (coval <= 0) {
+            fprintf(DIAG_OUT,"Inconsistency in cond_assign_s. Retape?\n");
+          }
+          dp_T0[res] = dp_T0[arg1];
+        }
+        hyper_index.push_back(TRANSLATE_RES(res));
+        hyper_value.push_back(dp_T0[res]);
+        break;
+
+#ifdef ATRIG_ERF
+      case asinh_op:
+      case acosh_op:
+      case atanh_op:
+      case erf_op:
+        break;
+#endif // ATRIG_ERF
+
+#ifdef ADOLC_ADVANCED_BRANCHING
+      case neq_a_a:
+      case eq_a_a:
+      case le_a_a:
+      case ge_a_a:
+      case lt_a_a:
+      case gt_a_a:
+        break;
+#endif // ADOLC_ADVANCED_BRANCHING
+      // Control opcodes
+      case take_stock_op:
+        size = get_locint_f();
+        res = get_locint_f();
+        d = get_val_v_f(size);
+        for(i = 0; i < size; i++) {
+          dp_T0[res+i] = d[i];
+        }
+        break;
+      case death_not:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        break;
+      case gen_quad:
+        arg1 = get_locint_f();
+        arg2 = get_locint_f();
+        res = get_locint_f();
+        coval = get_val_f();
+        if (coval != dp_T0[arg1]) {
+          fprintf(DIAG_OUT, "HYPER-TENSOR: forward sweep aborted; tape invalid!\n");
+        }
+        coval = get_val_f();
+      case ext_diff:
+        get_locint_f();
+        get_locint_f();
+        get_locint_f();
+        get_locint_f();
+        get_locint_f();
+        get_locint_f();
+      case ignore_me:
+        break;
       default:
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
+    opcode = get_op_f();
   }
+  end_sweep();
 }

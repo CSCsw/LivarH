@@ -21,7 +21,7 @@
 /* opcodes */
 
 enum OPCODES {
-  death_not,
+  death_not,  // 0
   assign_ind,
   assign_dep,
   assign_a,
@@ -31,7 +31,7 @@ enum OPCODES {
   eq_min_d,
   eq_min_a,
   eq_mult_d,
-  eq_mult_a,
+  eq_mult_a,  // 10
   plus_a_a,
   plus_d_a,
   min_a_a,
@@ -41,7 +41,7 @@ enum OPCODES {
   div_a_a,
   div_d_a,
   exp_op,
-  cos_op,
+  cos_op,  // 20
   sin_op,
   atan_op,
   log_op,
@@ -51,7 +51,7 @@ enum OPCODES {
   sqrt_op,
   asinh_op,
   acosh_op,
-  atanh_op,
+  atanh_op,  // 30
   gen_quad,
   end_of_tape,
   start_of_tape,
@@ -61,7 +61,7 @@ enum OPCODES {
   cond_assign,
   cond_assign_s,
   take_stock_op,
-  assign_d_one,
+  assign_d_one,   // 40
   assign_d_zero,
   incr_a,
   decr_a,

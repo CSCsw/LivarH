@@ -3,13 +3,16 @@
 
 #include <vector>
 #include <map>
+#include <limits.h>
+#include <adolc/adolc.h>
+#define NULLLOC UINT_MAX
 
 int hyper_tape(short tag,
                int dep,
                int indep,
                const double* basepoint,
-               std::map<int, int> ind_map,
-               std::vector<int>& hyper_index,
+               std::map<locint, locint>& ind_map,
+               std::vector<locint>& hyper_index,
                std::vector<double>& hyper_value);
 
 
