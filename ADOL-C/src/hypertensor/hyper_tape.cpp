@@ -7,6 +7,7 @@
 #include <adolc/adalloc.h>
 #include <adolc/interfaces.h>
 #include "taping_p.h"
+#include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/hyper_tape.h>
 
 #define TRANSLATE_ARG(arg) (index_translate[arg])
@@ -126,6 +127,7 @@ int hyper_tape(short tag,
         res = get_locint_f();
         hyper_index.push_back(TRANSLATE_DEP(res));
         hyper_value.push_back(dp_T0[res]);
+        std::cout << res << " D--> " << hyper_index.back() << std::endl;
         break;
       case eq_plus_d:
         res = get_locint_f();

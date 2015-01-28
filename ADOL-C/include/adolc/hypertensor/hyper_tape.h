@@ -5,7 +5,6 @@
 #include <map>
 #include <limits.h>
 #include <adolc/adolc.h>
-#define NULLLOC UINT_MAX
 
 int hyper_tape(short tag,
                int dep,

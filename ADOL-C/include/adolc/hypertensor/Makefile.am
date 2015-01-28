@@ -15,4 +15,5 @@ libhypertensorincludedir      = $(pkgincludedir)/hypertensor
 libhypertensorinclude_HEADERS = VectorGraph.h VectorGraphMap.h \
                                 MatrixGraph.h MatrixGraphMap.h \
                                 HyperGraph.h HyperGraphMap.h \
-                                hyper_tensor.h hyper_tape.h
+                                hyper_tensor.h hyper_tape.h \
+                                hyper_third_reverse.h hyper_common.h

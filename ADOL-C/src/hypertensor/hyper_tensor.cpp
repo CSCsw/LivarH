@@ -6,6 +6,7 @@
 #include <adolc/hypertensor/HyperGraph.h>
 #include <adolc/hypertensor/HyperGraphMap.h>
 #include <adolc/hypertensor/hyper_tape.h>
+#include <adolc/hypertensor/hyper_third_reverse.h>
 
 int hyper_tensor(short tag,
                  int dep,
@@ -17,7 +18,9 @@ int hyper_tensor(short tag,
                  unsigned int** xind,
                  double** values,
                  int* optinos) {
-  HyperGraph<locint>* hyper_graph = new HyperGraphMap<locint>();
+  VectorGraph<locint>* adjoints = new VectorGraphMap<locint>();
+  MatrixGraph<locint>* hessian = new MatrixGraphMap<locint>();
+  HyperGraph<locint>* tensor = new HyperGraphMap<locint>();
   std::vector<locint> hyper_index;
   std::vector<double> hyper_value;
   std::map<locint, locint> ind_map;
@@ -27,5 +30,8 @@ int hyper_tensor(short tag,
   for(const locint& x: hyper_index) {
     std::cout << x << std::endl;
   }
-  delete hyper_graph;
+  hyper_third_reverse(tag, hyper_index, hyper_value, adjoints, hessian, tensor);
+  delete adjoints;
+  delete hessian;
+  delete tensor;
 }
