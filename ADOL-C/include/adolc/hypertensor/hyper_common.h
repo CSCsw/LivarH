@@ -1,3 +1,6 @@
+#ifndef __HYPER_COMMON_H__
+#define __HYPER_COMMON_H__
+
 #include <limits.h>
 #include <adolc/adolc.h>
 
@@ -30,3 +33,5 @@ class DerivativeInfo {
   double pxx, pxy, pyy;
   double pxxx, pxxy, pxyy, pyyy;
 };
+
+#endif // __HYPER_COMMON_H__

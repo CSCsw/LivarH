@@ -17,9 +17,11 @@ class VectorGraphMap : public VectorGraph<T> {
   void increase(T x, double v);
   double get_and_erase(T x);
   double get(T x);
- 
+  bool reset();
+  bool get_next(T& x, double& w); 
 // private:
   std::map<T, double> data;
+  typename std::map<T, double>::iterator iter;
 };
 
 template <typename T>
@@ -63,6 +65,26 @@ double VectorGraphMap<T>::get_and_erase(T x) {
 template <typename T>
 double VectorGraphMap<T>::get(T x) {
   return data[x];
+}
+
+template <typename T>
+bool VectorGraphMap<T>::reset() {
+  iter = data.begin();
+  if (iter == data.end()) {
+    return false;
+  }
+  return true;
+}
+
+template <typename T>
+bool VectorGraphMap<T>::get_next(T& x, double& w) {
+  x = iter->first;
+  w = iter->second;
+  ++iter;
+  if (iter == data.end()) {
+    return false;
+  }
+  return true;
 }
 
 #endif // __VECTOR_GRAPH_MAP_H__

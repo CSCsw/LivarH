@@ -10,7 +10,7 @@
 #include <adolc/hypertensor/HyperGraph.h>
 #include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/hyper_third_reverse.h>
-
+#include <adolc/hypertensor/hyper_reverse.h>
 
 #define GET_LAST_INDEX hyper_index.back(); hyper_index.pop_back();
 #define GET_LAST_VALUE hyper_value.back(); hyper_value.pop_back();
@@ -365,7 +365,15 @@ int hyper_third_reverse(short tag,
       default:
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
-    opcode = get_op_r();    
+    // This is when we should do the work
+    if (info.r != NULLLOC) {
+      // TODO: third order
+      // Hessian
+      hyper_hessian(info, adjoints, hessian);
+      // Adjoints
+      hyper_adjoints(info, adjoints);
+    }
+    opcode = get_op_r(); 
   }
   end_sweep();
 }
