@@ -31,6 +31,23 @@ int hyper_tensor(short tag,
     std::cout << x << std::endl;
   }
   hyper_third_reverse(tag, hyper_index, hyper_value, adjoints, hessian, tensor);
+
+// result check
+  bool has_next;
+  locint x;
+  locint y;
+  double w;
+  has_next = adjoints->reset();
+  while(has_next) {
+    has_next = adjoints->get_next(x, w);
+    std::cout << "A[" << x << "]=" << w << std::endl;
+  }
+  has_next = hessian->reset();
+  while(has_next) {
+    has_next = hessian->get_next(x, y, w);
+    std::cout << "H[" << x << "," << y << "]=" << w << std::endl;
+  }
+
   delete adjoints;
   delete hessian;
   delete tensor;
