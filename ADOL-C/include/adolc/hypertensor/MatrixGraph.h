@@ -11,6 +11,7 @@ class MatrixGraph {
   virtual VectorGraph<T>* get(T x) = 0;
   virtual bool reset() = 0;
   virtual bool get_next(T& x, T& y, double& w) = 0;
+  virtual int get_size() = 0;
 };
 
 #endif // __MATRIX_GRAPH_H__

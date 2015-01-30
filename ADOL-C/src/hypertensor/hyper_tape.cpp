@@ -19,9 +19,9 @@
 locint translate_result(std::map<locint, locint>& index_translate,
                                locint& max_ind,
                                locint res) {
-  max_ind += 1;
-  index_translate[res] = max_ind;
-  return max_ind;
+  locint ret = max_ind;
+  index_translate[res] = max_ind++;
+  return ret;
 }
 
 int hyper_tape(short tag,

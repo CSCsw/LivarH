@@ -3,6 +3,8 @@
 
 #include <map>
 
+#include <adolc/hypertensor/hyper_common.h>
+
 #include "VectorGraph.h"
 #include "VectorGraphMap.h"
 #include "MatrixGraph.h"
@@ -20,6 +22,8 @@ class MatrixGraphMap : public MatrixGraph<T> {
   VectorGraph<T>* get(T x);
   bool reset();
   bool get_next(T& x, T& y, double& w);
+  int get_size();
+
 // private:
   std::map<T, std::map<T, double> > data;
   typename std::map<T, std::map<T, double> >::iterator iter;
@@ -52,6 +56,7 @@ MatrixGraphMap<T>::~MatrixGraphMap() {
 
 template <typename T>
 void MatrixGraphMap<T>::increase(T x, T y, double v) {
+  MAX_SWAP(x,y);
   data[x][y]+=v;
 }
 
@@ -95,6 +100,18 @@ bool MatrixGraphMap<T>::get_next(T& x, T& y, double& w) {
     iter2 = iter->second.begin();
   }
   return false;
+}
+
+template <typename T>
+int MatrixGraphMap<T>::get_size() {
+  int size_count = 0;
+  typename std::map<T, std::map<T, double> >::iterator t_iter;
+  t_iter = data.begin();
+  while (t_iter != data.end()) {
+    size_count += t_iter->second.size();
+    ++t_iter;
+  }
+  return size_count;
 }
 
 #endif // __MATRIX_GRAPH_MAP_H__

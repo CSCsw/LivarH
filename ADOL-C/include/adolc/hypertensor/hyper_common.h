@@ -1,10 +1,21 @@
 #ifndef __HYPER_COMMON_H__
 #define __HYPER_COMMON_H__
 
+#include <utility>
+
 #include <limits.h>
 #include <adolc/adolc.h>
 
 #define NULLLOC UINT_MAX
+
+template <typename T>
+void MAX_SWAP(T& a,T& b) {
+  if (a < b) {
+    T c = std::move(a);
+    a = std::move(b);
+    b = std::move(c);
+  }
+}
 
 template <typename T>
 class DerivativeInfo {
