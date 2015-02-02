@@ -174,6 +174,8 @@ int hyper_third_reverse(short tag,
         info.pyy = 2.0 * r / (y * y);
         info.pxy = -1.0 / (y * y);
         // TODO: third order
+        info.pxyy = 2.0 / (y * y * y);
+        info.pyyy = -6.0 * r / (y * y * y);
         break;
       case div_d_a:
         info.r = GET_LAST_INDEX;
@@ -185,6 +187,7 @@ int hyper_third_reverse(short tag,
         info.dx = -r / x;
         info.pxx = 2.0 * r / (x * x);
         // TODO: third order
+        info.pxxx = -6.0 * r / (x * x);
         break;
       case eq_plus_prod:
         info.r = GET_LAST_INDEX;
@@ -192,8 +195,13 @@ int hyper_third_reverse(short tag,
         info.y = GET_LAST_INDEX;
         POP_LAST_VALUE(3);
         info.dx = 1.0; info.dy = 1.0;
-        hyper_hessian(info, adjoints, hessian);
-        hyper_adjoints(info, adjoints);
+        {
+          double w = adjoints->get_and_erase(info.r);
+          VectorGraph<locint>* r = hessian->get_and_erase(info.r);
+          hyper_hessian(info, adjoints, hessian, w, r);
+          hyper_adjoints(info, adjoints, w);
+          delete r;
+        }
         
         res = info.y;
         info.clear();
@@ -210,8 +218,13 @@ int hyper_third_reverse(short tag,
         info.y = GET_LAST_INDEX;
         POP_LAST_VALUE(3);
         info.dx = 1.0; info.dy = -1.0;
-        hyper_hessian(info, adjoints, hessian);
-        hyper_adjoints(info, adjoints);
+        {
+          double w = adjoints->get_and_erase(info.r);
+          VectorGraph<locint>* r = hessian->get_and_erase(info.r);
+          hyper_hessian(info, adjoints, hessian, w, r);
+          hyper_adjoints(info, adjoints, w);
+          delete r;
+        }
         
         res = info.y;
         info.clear();
@@ -270,6 +283,7 @@ int hyper_third_reverse(short tag,
         info.dx = 1.0 / coval;
         info.pxx = -2.0 * x / (coval * coval);
         // TODO: third order
+        info.pxxx = (6.0 * x * x - 2.0) / (coval * coval * coval);
         break;
       case asin_op:
         info.r = GET_LAST_INDEX;
@@ -280,6 +294,7 @@ int hyper_third_reverse(short tag,
         info.dx = 1.0 / coval;
         info.pxx = x / (coval * coval * coval);
         // TODO: third order
+        info.pxxx = (2.0 * x * x + 1.0) / (coval * coval * coval * coval * coval);
         break;
       case acos_op:
         info.r = GET_LAST_INDEX;
@@ -288,8 +303,9 @@ int hyper_third_reverse(short tag,
         x = GET_LAST_VALUE;
         coval = - sqrt(1.0 - x * x);
         info.dx = 1.0 / coval;
-        info.pxx = 1.0 / (coval * coval * coval);
+        info.pxx = x / (coval * coval * coval);
         // TODO: third order
+        info.pxxx = (2.0 * x * x + 1.0) / (coval * coval * coval * coval * coval);
         break;
       case log_op:
         info.r = GET_LAST_INDEX;
@@ -299,6 +315,7 @@ int hyper_third_reverse(short tag,
         info.dx = 1.0 / x;
         info.pxx = -info.dx / x;
         // TODO: third order
+        info.pxxx = -2.0 * info.pxx / x;
         break;
       case pow_op:
         info.r = GET_LAST_INDEX;
@@ -310,9 +327,11 @@ int hyper_third_reverse(short tag,
         if (x == 0.0) {
           info.dx = 0.0;
           info.pxx = 0.0;
+          info.pxxx = 0.0;
         } else {
           info.dx = coval * (r / x);
           info.pxx = (coval - 1) * (info.dx / x);
+          info.pxxx = (coval - 2) * (info.pxx / x);
         }
         // TODO: third order
         break;
@@ -325,9 +344,11 @@ int hyper_third_reverse(short tag,
         if (x == 0.0) {
           info.dx = 0.0;
           info.pxx = 0.0;
+          info.pxxx = 0.0;
         } else {
           info.dx = 0.5 * r / x;
           info.pxx = -0.5 * info.dx / x;
+          info.pxxx = -1.5 * info.pxx / x;
         }
         // TODO: third order;
         break;
@@ -448,11 +469,17 @@ int hyper_third_reverse(short tag,
               << info.dx << "," << info.dy << std::endl
               << info.pxx << "," << info.pxy << "," << info.pyy << std::endl;
     if (info.r != NULLLOC) {
+      double w = adjoints->get_and_erase(info.r);
+      VectorGraph<locint>* r = hessian->get_and_erase(info.r);
+      MatrixGraph<locint>* e = tensor->get_and_erase(info.r);
       // TODO: third order
+      hyper_third(info, adjoints, hessian, tensor, w, r, e);
       // Hessian
-      hyper_hessian(info, adjoints, hessian);
+      hyper_hessian(info, adjoints, hessian, w, r);
       // Adjoints
-      hyper_adjoints(info, adjoints);
+      hyper_adjoints(info, adjoints, w);
+      delete r;
+      delete e;
     }
     opcode = get_op_r(); 
   }

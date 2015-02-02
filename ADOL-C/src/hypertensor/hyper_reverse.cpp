@@ -6,12 +6,24 @@
 #include <adolc/hypertensor/HyperGraph.h>
 #include <adolc/hypertensor/hyper_common.h>
 
+int hyper_third(DerivativeInfo<locint>& info,
+                VectorGraph<locint>* adjoints,
+                MatrixGraph<locint>* hessian,
+                HyperGraph<locint>* tensor,
+                double w,
+                VectorGraph<locint>* r,
+                MatrixGraph<locint>* e) {
+  std::cout << "In tensor " << std::endl;
+
+
+}
+
 int hyper_hessian(DerivativeInfo<locint>& info,
                   VectorGraph<locint>* adjoints,
-                  MatrixGraph<locint>* hessian) {
+                  MatrixGraph<locint>* hessian,
+                  double w,
+                  VectorGraph<locint>* r) {
   std::cout << "In hessian" << std::endl;
-  double w = adjoints->get(info.r);
-  VectorGraph<locint>* r = hessian->get_and_erase(info.r);
   r->debug();
   bool has_next = r->reset();
   locint p;
@@ -77,9 +89,9 @@ int hyper_hessian(DerivativeInfo<locint>& info,
 }
 
 int hyper_adjoints(DerivativeInfo<locint>& info,
-                   VectorGraph<locint>* adjoints) {
+                   VectorGraph<locint>* adjoints,
+                   double w) {
 //  std::cout << "In adjoints" << std::endl;
-  double w = adjoints->get_and_erase(info.r);
   if (w == 0.0) {
     return 0;
   }

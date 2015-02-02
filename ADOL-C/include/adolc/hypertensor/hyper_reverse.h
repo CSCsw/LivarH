@@ -7,11 +7,17 @@
 int hyper_third(DerivativeInfo<locint>& info,
                 VectorGraph<locint>* adjoints,
                 MatrixGraph<locint>* hessian,
-                HyperGraph<locint>* tensor);
+                HyperGraph<locint>* tensor,
+                double w,
+                VectorGraph<locint>* r,
+                MatrixGraph<locint>* e);
 
 int hyper_hessian(DerivativeInfo<locint>& info,
                   VectorGraph<locint>* adjoints,
-                  MatrixGraph<locint>* hessian);
+                  MatrixGraph<locint>* hessian,
+                  double w,
+                  VectorGraph<locint>* r);
 
 int hyper_adjoints(DerivativeInfo<locint>& info,
-                   VectorGraph<locint>* adjoints);
+                   VectorGraph<locint>* adjoints,
+                   double w);
