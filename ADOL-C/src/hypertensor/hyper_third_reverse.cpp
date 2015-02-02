@@ -5,6 +5,7 @@
 #include "oplate.h"
 #include "taping_p.h"
 #include <adolc/adolc.h>
+#include <adolc/adolc_settings.h>
 #include <adolc/hypertensor/VectorGraph.h>
 #include <adolc/hypertensor/MatrixGraph.h>
 #include <adolc/hypertensor/HyperGraph.h>
@@ -36,6 +37,7 @@ int hyper_third_reverse(short tag,
   opcode = get_op_r();
   while(opcode != start_of_tape) {
     info.clear();
+    info.opcode = opcode;
     switch (opcode) {
       case end_of_op:
         get_op_block_r();
@@ -111,6 +113,7 @@ int hyper_third_reverse(short tag,
         GET_LAST_VALUE;
         info.dy = GET_LAST_VALUE;
         info.dx = GET_LAST_VALUE;
+        info.pxy = 1.0;
         break;
       case incr_a:
       case decr_a:
@@ -127,7 +130,7 @@ int hyper_third_reverse(short tag,
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.dx = 1.0;
-        POP_LAST_VALUE(3);
+        POP_LAST_VALUE(2);
         break;
       case min_a_a:
         info.r = GET_LAST_INDEX;
@@ -182,6 +185,42 @@ int hyper_third_reverse(short tag,
         info.dx = -r / x;
         info.pxx = 2.0 * r / (x * x);
         // TODO: third order
+        break;
+      case eq_plus_prod:
+        info.r = GET_LAST_INDEX;
+        info.x = GET_LAST_INDEX;
+        info.y = GET_LAST_INDEX;
+        POP_LAST_VALUE(3);
+        info.dx = 1.0; info.dy = 1.0;
+        hyper_hessian(info, adjoints, hessian);
+        hyper_adjoints(info, adjoints);
+        
+        res = info.y;
+        info.clear();
+        info.r = res;
+        info.x = GET_LAST_INDEX;
+        info.y = GET_LAST_INDEX;
+        info.dy = GET_LAST_VALUE;
+        info.dx = GET_LAST_VALUE;
+        info.pxy = 1.0;
+        break;
+      case eq_min_prod:
+        info.r = GET_LAST_INDEX;
+        info.x = GET_LAST_INDEX;
+        info.y = GET_LAST_INDEX;
+        POP_LAST_VALUE(3);
+        info.dx = 1.0; info.dy = -1.0;
+        hyper_hessian(info, adjoints, hessian);
+        hyper_adjoints(info, adjoints);
+        
+        res = info.y;
+        info.clear();
+        info.r = res;
+        info.x = GET_LAST_INDEX;
+        info.y = GET_LAST_INDEX;
+        info.dy = GET_LAST_VALUE;
+        info.dx = GET_LAST_VALUE;
+        info.pxy = 1.0;
         break;
       case pos_sign_a:
         info.r = GET_LAST_INDEX;
@@ -261,12 +300,29 @@ int hyper_third_reverse(short tag,
         info.pxx = -info.dx / x;
         // TODO: third order
         break;
+      case pow_op:
+        info.r = GET_LAST_INDEX;
+        info.x = GET_LAST_INDEX;
+        GET_LAST_INDEX;
+        r = GET_LAST_VALUE;
+        x = GET_LAST_VALUE;
+        coval = GET_LAST_VALUE;
+        if (x == 0.0) {
+          info.dx = 0.0;
+          info.pxx = 0.0;
+        } else {
+          info.dx = coval * (r / x);
+          info.pxx = (coval - 1) * (info.dx / x);
+        }
+        // TODO: third order
+        break;
       case sqrt_op:
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         r = GET_LAST_VALUE;
         x = GET_LAST_VALUE;
-        if (x = 0.0) {
+        std::cout << r << " = sqrt : " << x << std::endl;
+        if (x == 0.0) {
           info.dx = 0.0;
           info.pxx = 0.0;
         } else {
@@ -305,9 +361,30 @@ int hyper_third_reverse(short tag,
         }
         break;
       case cond_assign:
+        info.r = GET_LAST_INDEX;
+        POP_LAST_VALUE(3);
+        coval = GET_LAST_VALUE;
+        if (coval > 0.0) {
+          GET_LAST_INDEX;
+          info.x = GET_LAST_INDEX;
+          GET_LAST_INDEX;
+        } else {
+          info.x = GET_LAST_INDEX;
+          GET_LAST_INDEX;
+          GET_LAST_INDEX;
+        }
+        info.dx = 1.0;
+        break; 
       case cond_assign_s:
+        info.r = GET_LAST_INDEX;
+        POP_LAST_VALUE(2);
+        coval = GET_LAST_VALUE;
+        if (coval > 0.0) {
+          info.x = GET_LAST_INDEX;
+          GET_LAST_INDEX;
+          info.dx = 1.0;
+        }
         break;
-
 
       // Dummy opcodes in reverse
       case death_not:
@@ -321,7 +398,7 @@ int hyper_third_reverse(short tag,
       case ext_diff_iArr:
         break;
 
-#ifdef ARTIG_ERF
+#ifdef ATRIG_ERF
       case asinh_op:
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
@@ -348,7 +425,7 @@ int hyper_third_reverse(short tag,
         r = GET_LAST_VALUE;
         x = GET_LAST_VALUE;
         info.dx = 1.0 / (1.0 - x * x);
-        info.dx = 2.0 * x * info.dx * info.dx;
+        info.pxx = 2.0 * x * info.dx * info.dx;
         // TODO: third order
         break;
       case erf_op:
@@ -357,7 +434,7 @@ int hyper_third_reverse(short tag,
         r = GET_LAST_VALUE;
         x = GET_LAST_VALUE;
         info.dx = 2.0 / sqrt(acos(-1.0)) * exp(-x * x);
-        info.pxx = -2.0 * x * info->dx;
+        info.pxx = -2.0 * x * info.dx;
         // TODO: third order
         break;
 #endif // ATRIG_ERF
@@ -366,6 +443,10 @@ int hyper_third_reverse(short tag,
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
     // This is when we should do the work
+    std::cout << (int)info.opcode << " : "
+              << info.r << "<---" << info.x << ", " << info.y << std::endl
+              << info.dx << "," << info.dy << std::endl
+              << info.pxx << "," << info.pxy << "," << info.pyy << std::endl;
     if (info.r != NULLLOC) {
       // TODO: third order
       // Hessian

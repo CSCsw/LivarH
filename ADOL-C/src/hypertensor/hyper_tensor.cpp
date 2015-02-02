@@ -69,7 +69,6 @@ int hyper_tensor(short tag,
       (*rind)[i] = x;
       (*values)[i] = w;
       ++i;
-      std::cout << "A[" << x << "]=" << w << std::endl;
     }
   } else if (options[0] == 2) {
     int n = hessian->get_size();
@@ -88,7 +87,6 @@ int hyper_tensor(short tag,
       (*cind)[i] = y;
       (*values)[i] = w;
       ++i;
-      std::cout << "A[" << x << "]=" << w << std::endl;
     }
   }
   delete adjoints;

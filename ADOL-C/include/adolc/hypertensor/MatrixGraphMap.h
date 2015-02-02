@@ -23,6 +23,7 @@ class MatrixGraphMap : public MatrixGraph<T> {
   bool reset();
   bool get_next(T& x, T& y, double& w);
   int get_size();
+  void debug();
 
 // private:
   std::map<T, std::map<T, double> > data;
@@ -114,4 +115,19 @@ int MatrixGraphMap<T>::get_size() {
   return size_count;
 }
 
+template <typename T>
+void MatrixGraphMap<T>::debug() {
+  typename std::map<T, std::map<T, double> >::iterator t_iter;
+  t_iter = data.begin();
+  while (t_iter != data.end()) {
+    typename std::map<T, double>::iterator t_iter2;
+    t_iter2 = t_iter->second.begin();
+    while (t_iter2 != t_iter->second.end()) {
+      std::cout << "H[" << t_iter->first << "," <<t_iter2->first << "] = "
+                << t_iter2->second << std::endl;
+      ++t_iter2;
+    }
+    ++t_iter;
+  }
+}
 #endif // __MATRIX_GRAPH_MAP_H__

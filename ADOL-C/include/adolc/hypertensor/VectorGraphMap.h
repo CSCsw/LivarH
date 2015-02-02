@@ -21,6 +21,8 @@ class VectorGraphMap : public VectorGraph<T> {
   bool get_next(T& x, double& w); 
   int get_size();
 
+  void debug();
+
 // private:
   std::map<T, double> data;
   typename std::map<T, double>::iterator iter;
@@ -93,4 +95,15 @@ template <typename T>
 int VectorGraphMap<T>::get_size() {
   return data.size();
 }
+
+template <typename T>
+void VectorGraphMap<T>::debug() {
+  typename std::map<T, double>::iterator t_iter;
+  t_iter = data.begin();
+  while(t_iter != data.end()) {
+    std::cout << "A[" << t_iter->first << "]=" << t_iter->second << std::endl;
+    ++t_iter;
+  }
+}
+
 #endif // __VECTOR_GRAPH_MAP_H__

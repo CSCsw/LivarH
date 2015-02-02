@@ -12,12 +12,14 @@ int hyper_hessian(DerivativeInfo<locint>& info,
   std::cout << "In hessian" << std::endl;
   double w = adjoints->get(info.r);
   VectorGraph<locint>* r = hessian->get_and_erase(info.r);
+  r->debug();
   bool has_next = r->reset();
   locint p;
   double pw;
   while (has_next) {
     has_next = r->get_next(p, pw);
-    if (w != 0.0) {
+    std::cout << p << "," << pw << std::endl;
+    if (pw != 0.0) {
       if (info.y != NULLLOC){
         if (p != info.r){
           if (p == info.x){
@@ -44,6 +46,7 @@ int hyper_hessian(DerivativeInfo<locint>& info,
       } else {
         if (p != info.r){
           if (p == info.x){
+            std::cout << "XXX" << std::endl;
             hessian->increase(p, p, 2 * info.dx * pw);
           } else {
             hessian->increase(info.x, p, info.dx * pw);
@@ -70,11 +73,12 @@ int hyper_hessian(DerivativeInfo<locint>& info,
       }
     }
   } // if (w != 0)
+  hessian->debug();
 }
 
 int hyper_adjoints(DerivativeInfo<locint>& info,
                    VectorGraph<locint>* adjoints) {
-  std::cout << "In adjoints" << std::endl;
+//  std::cout << "In adjoints" << std::endl;
   double w = adjoints->get_and_erase(info.r);
   if (w == 0.0) {
     return 0;
@@ -85,5 +89,6 @@ int hyper_adjoints(DerivativeInfo<locint>& info,
   if (info.dy != 0.0) {
     adjoints->increase(info.y, w * info.dy);
   }
+  adjoints->debug();
 }
 
