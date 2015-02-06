@@ -16,6 +16,19 @@
 #define GET_LAST_INDEX hyper_index.back(); hyper_index.pop_back();
 #define GET_LAST_VALUE hyper_value.back(); hyper_value.pop_back();
 #define POP_LAST_VALUE(n) for(int i = 0; i < n; ++i) {hyper_value.pop_back();}
+
+#define COMBINE_D_1 info.dx += info.dy; info.dy = 0.0
+#define COMBINE_D_2 info.pxx += 2.0 * info.pxy + info.pyy;\
+                    info.pxy = 0.0; info.pyy = 0.0;\
+                    COMBINE_D_1;
+#define COMBINE_D_3 info.pxxx += 3.0 * info.pxyy + 3.0 * info.pxxy + info.pyy;\
+                    info.pxyy = 0; info.pxxy = 0.0; info.pyyy = 0.0;\
+                    COMBINE_D_2
+
+#define PSEUDO_BINARY_1 if (info.y == info.x) {info.y = NULLLOC; COMBINE_D_1;}
+#define PSEUDO_BINARY_2 if (info.y == info.x) {info.y = NULLLOC; COMBINE_D_2;}
+#define PSEUDO_BINARY_3 if (info.y == info.x) {info.y = NULLLOC; COMBINE_D_3;}
+
 int hyper_third_reverse(short tag,
                         std::vector<locint>& hyper_index,
                         std::vector<double>& hyper_value,
@@ -89,6 +102,7 @@ int hyper_third_reverse(short tag,
         info.y = GET_LAST_INDEX;
         info.dx = 1.0; info.dy = 1.0;
         POP_LAST_VALUE(3);
+        PSEUDO_BINARY_1;
         break;
       case eq_min_d:
         break;
@@ -98,6 +112,7 @@ int hyper_third_reverse(short tag,
         info.y = GET_LAST_INDEX;
         info.dx = 1.0; info.dy = -1.0;
         POP_LAST_VALUE(3);
+        PSEUDO_BINARY_1;
         break;
       case eq_mult_d:
         info.r = GET_LAST_INDEX;
@@ -114,6 +129,7 @@ int hyper_third_reverse(short tag,
         info.dy = GET_LAST_VALUE;
         info.dx = GET_LAST_VALUE;
         info.pxy = 1.0;
+        PSEUDO_BINARY_2;
         break;
       case incr_a:
       case decr_a:
@@ -125,6 +141,7 @@ int hyper_third_reverse(short tag,
         info.dx = 1.0;
         info.dy = 1.0;
         POP_LAST_VALUE(3);
+        PSEUDO_BINARY_1;
         break;
       case plus_d_a:
         info.r = GET_LAST_INDEX;
@@ -139,6 +156,7 @@ int hyper_third_reverse(short tag,
         info.dx = -1.0;
         info.dy = 1.0;
         POP_LAST_VALUE(3);
+        PSEUDO_BINARY_1;
         break;
       case min_d_a:
         info.r = GET_LAST_INDEX;
@@ -154,6 +172,7 @@ int hyper_third_reverse(short tag,
         info.dy = GET_LAST_VALUE;
         info.dx = GET_LAST_VALUE;
         info.pxy = 1.0;
+        PSEUDO_BINARY_2;
         break;
       case mult_d_a:
         info.r = GET_LAST_INDEX;
@@ -176,6 +195,7 @@ int hyper_third_reverse(short tag,
         // TODO: third order
         info.pxyy = 2.0 / (y * y * y);
         info.pyyy = -6.0 * r / (y * y * y);
+        PSEUDO_BINARY_3;
         break;
       case div_d_a:
         info.r = GET_LAST_INDEX;
@@ -188,6 +208,7 @@ int hyper_third_reverse(short tag,
         info.pxx = 2.0 * r / (x * x);
         // TODO: third order
         info.pxxx = -6.0 * r / (x * x);
+        PSEUDO_BINARY_3;
         break;
       case eq_plus_prod:
         info.r = GET_LAST_INDEX;
@@ -211,6 +232,7 @@ int hyper_third_reverse(short tag,
         info.dy = GET_LAST_VALUE;
         info.dx = GET_LAST_VALUE;
         info.pxy = 1.0;
+        PSEUDO_BINARY_2;
         break;
       case eq_min_prod:
         info.r = GET_LAST_INDEX;
@@ -234,6 +256,7 @@ int hyper_third_reverse(short tag,
         info.dy = GET_LAST_VALUE;
         info.dx = GET_LAST_VALUE;
         info.pxy = 1.0;
+        PSEUDO_BINARY_2;
         break;
       case pos_sign_a:
         info.r = GET_LAST_INDEX;
@@ -368,7 +391,7 @@ int hyper_third_reverse(short tag,
           info.y = GET_LAST_INDEX;
           fprintf(DIAG_OUT, "WARNING: Tie in min(a,b)!\n");
         }
-        info.dx = 0;
+        info.dx = 1.0; info.y = NULLLOC;
         break;
       case abs_val:
         info.r = GET_LAST_INDEX;
@@ -464,10 +487,12 @@ int hyper_third_reverse(short tag,
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
     // This is when we should do the work
+/*
     std::cout << (int)info.opcode << " : "
               << info.r << "<---" << info.x << ", " << info.y << std::endl
               << info.dx << "," << info.dy << std::endl
               << info.pxx << "," << info.pxy << "," << info.pyy << std::endl;
+*/
     if (info.r != NULLLOC) {
       double w = adjoints->get_and_erase(info.r);
       VectorGraph<locint>* r = hessian->get_and_erase(info.r);

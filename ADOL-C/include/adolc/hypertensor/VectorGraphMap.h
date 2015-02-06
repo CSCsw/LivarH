@@ -56,6 +56,7 @@ VectorGraphMap<T>::~VectorGraphMap() {
 
 template <typename T>
 void VectorGraphMap<T>::increase(T x, double v) {
+  if (v == 0.0) {return;}
   data[x]+=v;
 }
 

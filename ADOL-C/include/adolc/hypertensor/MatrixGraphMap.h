@@ -57,6 +57,7 @@ MatrixGraphMap<T>::~MatrixGraphMap() {
 
 template <typename T>
 void MatrixGraphMap<T>::increase(T x, T y, double v) {
+  if (v == 0.0) {return;}
   MAX_SWAP(x,y);
   data[x][y]+=v;
 }

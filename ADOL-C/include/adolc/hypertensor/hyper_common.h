@@ -9,11 +9,15 @@
 #define NULLLOC UINT_MAX
 
 template <typename T>
+void T_SWAP(T&a, T& b) {
+  T c = std::move(a);
+  a = std::move(b);
+  b = std::move(c);
+}
+template <typename T>
 void MAX_SWAP(T& a,T& b) {
   if (a < b) {
-    T c = std::move(a);
-    a = std::move(b);
-    b = std::move(c);
+    T_SWAP<T>(a,b);
   }
 }
 

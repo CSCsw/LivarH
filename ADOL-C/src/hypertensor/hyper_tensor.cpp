@@ -42,7 +42,9 @@ int hyper_tensor(short tag,
   bool has_next;
   locint x;
   locint y;
+  locint z;
   double w;
+/*
   has_next = adjoints->reset();
   std::cout << "|A|=" << adjoints->get_size() << std::endl;
   while(has_next) {
@@ -50,11 +52,22 @@ int hyper_tensor(short tag,
     std::cout << "A[" << x << "]=" << w << std::endl;
   }
   has_next = hessian->reset();
-  std::cout << "|H|" << hessian->get_size() << std::endl;
+  std::cout << "|H| = " << hessian->get_size() << std::endl;
   while(has_next) {
     has_next = hessian->get_next(x, y, w);
-    std::cout << "H[" << x << "," << y << "]=" << w << std::endl;
+    std::cout << "H[" << x << ", " << y << "]=" << w << std::endl;
   }
+
+  has_next = tensor->reset();
+  std::cout << "|T| = " << tensor->get_size() << std::endl;
+  while(has_next) {
+    has_next = tensor->get_next(x, y, z, w);
+    printf("T[%d, %d, %d] = %10.5f\n", x, y, z, w);
+    fflush(stdout);
+  }
+*/
+  adjoints->debug();
+  std::cout << " |T| = " << tensor->get_size() << std::endl;
   if (options[0] == 1) {
     int n = adjoints->get_size();
     (*nnz) = n;

@@ -15,7 +15,111 @@ int hyper_third(DerivativeInfo<locint>& info,
                 MatrixGraph<locint>* e) {
   std::cout << "In tensor " << std::endl;
 
+  locint p;
+  locint q;
+  double pw;
+  double coeff = 0.0;
+  double xcoeff = 0.0;
+  double ycoeff = 0.0;
 
+  bool has_next = e->reset();
+  while(has_next) {
+    // p >= q
+    has_next = e->get_next(p, q, pw);
+    if (p != info.r and q!= info.r) {
+      if (info.x != NULLLOC && info.dx != 0.0) {
+        xcoeff = 1.0;
+        if (info.x == p) {xcoeff += 1.0;}
+        if (info.x == q) {xcoeff += 1.0;}
+        tensor->increase(p, q, info.x, xcoeff * pw * info.dx);
+      }
+      if (info.y != NULLLOC && info.dy != 0.0) {
+        ycoeff = 1.0;
+        if (info.y == p) {ycoeff += 1.0;}
+        if (info.y == q) {ycoeff += 1.0;}
+        tensor->increase(p, q, info.y, ycoeff * pw * info.dy);
+      }
+    } else { // p == r or q == r;
+      if (p != q) {
+        if (q == info.r) {T_SWAP(p,q);}  // p == r != q
+        if (info.x != NULLLOC && info.y != NULLLOC) {
+          coeff = 1.0; xcoeff = 1.0; ycoeff = 1.0;
+          if (info.x == q) {coeff += 1.0; xcoeff += 2.0;}
+          if (info.y == q) {coeff += 1.0; ycoeff += 2.0;}
+          tensor->increase(q, info.x, info.x, xcoeff * pw * info.dx * info.dx);
+          tensor->increase(q, info.x, info.y, coeff * pw * info.dx * info.dy);
+          tensor->increase(q, info.y, info.y, ycoeff * pw * info.dy * info.dy);
+        } else if (info.x != NULLLOC) {
+          xcoeff = 1.0;
+          if (info.x == q) {xcoeff += 2.0;}
+          tensor->increase(q, info.x, info.x, xcoeff * pw * info.dx * info.dx);
+        }
+      } else {  // p == q == r
+        if (info.x != NULLLOC && info.dx != 0.0) {
+          tensor->increase(info.x, info.x, info.x,
+                           pw * info.dx * info.dx * info.dx);
+          if (info.y != NULLLOC && info.dy != 0.0) {
+            tensor->increase(info.x, info.x, info.y,
+                             pw * info.dx * info.dx * info.dy);
+            tensor->increase(info.x, info.y, info.y,
+                             pw * info.dx * info.dy * info.dy);
+            tensor->increase(info.y, info.y, info.y,
+                             pw * info.dy * info.dy * info.dy);
+  
+          }
+        }
+      }
+    }
+  }
+  has_next = r->reset();
+  while (has_next) {
+    has_next = r->get_next(p, pw);
+    if (p != info.r) {
+      if (info.x != NULLLOC && info.y != NULLLOC) {
+        coeff = 1.0; xcoeff = 1.0; ycoeff = 1.0;
+        if (info.x == p) {coeff += 1.0; xcoeff += 2.0;}
+        if (info.y == p) {coeff += 1.0; ycoeff += 2.0;}
+        tensor->increase(p, info.x, info.x, xcoeff * pw * info.pxx);
+        tensor->increase(p, info.x, info.y, coeff * pw * info.pxy);
+        tensor->increase(p, info.y, info.y, ycoeff * pw * info.pyy);
+      } else if (info.x != NULLLOC) {
+        xcoeff = 1.0;
+        if (info.x == p) {xcoeff += 2.0;}
+        tensor->increase(p, info.x, info.x, xcoeff * pw * info.pxx);
+      }
+    } else { // p == r;
+      if (info.x != NULLLOC) {
+        if (info.y != NULLLOC) {
+          tensor->increase(info.x, info.x, info.x,
+                           3.0 * pw * info.dx * info.pxx);
+          tensor->increase(info.x, info.x, info.y, 
+                           2.0 * pw * info.dx * info.pxy);
+          tensor->increase(info.x, info.y, info.y,
+                           1.0 * pw * info.dx * info.pyy);
+          tensor->increase(info.y, info.x, info.x,
+                           1.0 * pw * info.dy * info.pxx);
+          tensor->increase(info.y, info.x, info.y,
+                           2.0 * pw * info.dy * info.pxy);
+          tensor->increase(info.y, info.y, info.y,
+                           3.0 * pw * info.dy * info.pyy);
+        } else {
+          tensor->increase(info.x, info.x, info.x,
+                           3.0 * pw * info.dx * info.pxx);
+        }
+      }
+    }
+  }
+  if (w != 0.0) {
+    if (info.x != NULLLOC && info.y != NULLLOC) {
+      tensor->increase(info.x, info.x, info.x, w * info.pxxx);
+      tensor->increase(info.x, info.x, info.y, w * info.pxxy);
+      tensor->increase(info.x, info.y, info.y, w * info.pxyy);
+      tensor->increase(info.y, info.y, info.y, w * info.pyyy);
+    } else if (info.x != NULLLOC) {
+      tensor->increase(info.x, info.x, info.x, w * info.pxxx);
+    }
+  }
+//  tensor->debug();
 }
 
 int hyper_hessian(DerivativeInfo<locint>& info,
@@ -24,13 +128,13 @@ int hyper_hessian(DerivativeInfo<locint>& info,
                   double w,
                   VectorGraph<locint>* r) {
   std::cout << "In hessian" << std::endl;
-  r->debug();
+//  r->debug();
   bool has_next = r->reset();
   locint p;
   double pw;
   while (has_next) {
     has_next = r->get_next(p, pw);
-    std::cout << p << "," << pw << std::endl;
+//    std::cout << p << "," << pw << std::endl;
     if (pw != 0.0) {
       if (info.y != NULLLOC){
         if (p != info.r){
@@ -45,20 +149,13 @@ int hyper_hessian(DerivativeInfo<locint>& info,
             hessian->increase(info.y, p, info.dy * pw);
           }
         } else {
-          if (info.x != info.y){
-            hessian->increase(info.x, info.x, info.dx * info.dx * pw);
-            hessian->increase(info.x, info.y, info.dx * info.dy * pw);
-            hessian->increase(info.y, info.y, info.dy * info.dy * pw);
-          } else {
-            hessian->increase(info.x, info.x, (info.dx * info.dx + 
-                                               2 * info.dx * info.dy +
-                                               info.dy * info.dy) * pw);
-          }
+          hessian->increase(info.x, info.x, info.dx * info.dx * pw);
+          hessian->increase(info.x, info.y, info.dx * info.dy * pw);
+          hessian->increase(info.y, info.y, info.dy * info.dy * pw);
         }
       } else {
         if (p != info.r){
           if (p == info.x){
-            std::cout << "XXX" << std::endl;
             hessian->increase(p, p, 2 * info.dx * pw);
           } else {
             hessian->increase(info.x, p, info.dx * pw);
@@ -85,7 +182,7 @@ int hyper_hessian(DerivativeInfo<locint>& info,
       }
     }
   } // if (w != 0)
-  hessian->debug();
+//  hessian->debug();
 }
 
 int hyper_adjoints(DerivativeInfo<locint>& info,
@@ -101,6 +198,6 @@ int hyper_adjoints(DerivativeInfo<locint>& info,
   if (info.dy != 0.0) {
     adjoints->increase(info.y, w * info.dy);
   }
-  adjoints->debug();
+//  adjoints->debug();
 }
 
