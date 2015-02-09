@@ -5,7 +5,6 @@
 #include "oplate.h"
 #include "taping_p.h"
 #include <adolc/adolc.h>
-#include <adolc/adolc_settings.h>
 #include <adolc/hypertensor/VectorGraph.h>
 #include <adolc/hypertensor/MatrixGraph.h>
 #include <adolc/hypertensor/HyperGraph.h>

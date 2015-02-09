@@ -6,7 +6,6 @@
 #include "oplate.h"
 #include <adolc/adalloc.h>
 #include <adolc/interfaces.h>
-#include <adolc/adolc_settings.h>
 #include "taping_p.h"
 #include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/hyper_tape.h>
