@@ -9,10 +9,17 @@ class MatrixGraph {
   virtual void increase(T x, T y, double v) = 0;
   virtual VectorGraph<T>* get_and_erase(T x) = 0;
   virtual VectorGraph<T>* get(T x) = 0;
-  virtual bool reset() = 0;
-  virtual bool get_next(T& x, T& y, double& w) = 0;
   virtual int get_size() = 0;
   virtual void debug() = 0;
+
+  class iterator {
+   public:
+    virtual ~iterator() {};
+    virtual bool reset() = 0;
+    virtual bool get_next(T& x, T& y, double& w) = 0; 
+  };
+
+  virtual typename MatrixGraph<T>::iterator* get_iterator() = 0;
 };
 
 #endif // __MATRIX_GRAPH_H__

@@ -20,15 +20,26 @@ class MatrixGraphMap : public MatrixGraph<T> {
   void increase(T x, T y, double v);
   VectorGraph<T>* get_and_erase(T x);
   VectorGraph<T>* get(T x);
-  bool reset();
-  bool get_next(T& x, T& y, double& w);
   int get_size();
   void debug();
+  typename MatrixGraph<T>::iterator* get_iterator();
 
-// private:
+  class iterator : public MatrixGraph<T>::iterator {
+   public:
+    iterator(std::map<T, std::map<T, double> >* _data_p): _data(_data_p) {};
+    virtual ~iterator();
+    bool reset();
+    bool get_next(T& x, T& y, double& w);
+
+   private:
+    const std::map<T, std::map<T, double> >* const _data;
+    typename std::map<T, std::map<T, double> >::const_iterator iter;
+    typename std::map<T, double>::const_iterator iter2;
+  };
+
+ private:
   std::map<T, std::map<T, double> > data;
-  typename std::map<T, std::map<T, double> >::iterator iter;
-  typename std::map<T, double>::iterator iter2;
+
 };
 
 template <typename T>
@@ -76,9 +87,20 @@ VectorGraph<T>* MatrixGraphMap<T>::get(T x) {
 }
 
 template <typename T>
-bool MatrixGraphMap<T>::reset() {
-  iter = data.begin();
-  while(iter != data.end()) {
+typename MatrixGraph<T>::iterator* MatrixGraphMap<T>::get_iterator() {
+  typename MatrixGraph<T>::iterator* ret = new MatrixGraphMap<T>::iterator(&data);
+  return ret;
+}
+
+template <typename T>
+MatrixGraphMap<T>::iterator::~iterator() {
+
+}
+
+template <typename T>
+bool MatrixGraphMap<T>::iterator::reset() {
+  iter = _data->begin();
+  while(iter != _data->end()) {
     iter2 = iter->second.begin();
     if (iter2 != iter->second.end()) {
       return true;
@@ -89,12 +111,12 @@ bool MatrixGraphMap<T>::reset() {
 }
 
 template <typename T>
-bool MatrixGraphMap<T>::get_next(T& x, T& y, double& w) {
+bool MatrixGraphMap<T>::iterator::get_next(T& x, T& y, double& w) {
   x = iter->first;
   y = iter2->first;
   w = iter2->second;
   ++iter2;
-  while(iter != data.end()) {
+  while(iter != _data->end()) {
     if (iter2 != iter->second.end()) {
       return true;
     }

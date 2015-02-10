@@ -22,10 +22,13 @@ int hyper_third(DerivativeInfo<locint>& info,
   double xcoeff = 0.0;
   double ycoeff = 0.0;
 
-  bool has_next = e->reset();
+  MatrixGraph<locint>::iterator* e_iter = e->get_iterator();
+  VectorGraph<locint>::iterator* r_iter = r->get_iterator();
+
+  bool has_next = e_iter->reset();
   while(has_next) {
     // p >= q
-    has_next = e->get_next(p, q, pw);
+    has_next = e_iter->get_next(p, q, pw);
     if (p != info.r and q!= info.r) {
       if (info.x != NULLLOC && info.dx != 0.0) {
         xcoeff = 1.0;
@@ -71,9 +74,10 @@ int hyper_third(DerivativeInfo<locint>& info,
       }
     }
   }
-  has_next = r->reset();
+
+  has_next = r_iter->reset();
   while (has_next) {
-    has_next = r->get_next(p, pw);
+    has_next = r_iter->get_next(p, pw);
     if (p != info.r) {
       if (info.x != NULLLOC && info.y != NULLLOC) {
         coeff = 1.0; xcoeff = 1.0; ycoeff = 1.0;
@@ -119,6 +123,8 @@ int hyper_third(DerivativeInfo<locint>& info,
       tensor->increase(info.x, info.x, info.x, w * info.pxxx);
     }
   }
+  delete e_iter;
+  delete r_iter;
 //  tensor->debug();
 }
 
@@ -128,11 +134,12 @@ int hyper_hessian(DerivativeInfo<locint>& info,
                   double w,
                   VectorGraph<locint>* r) {
 //  std::cout << "In hessian" << std::endl;
-  bool has_next = r->reset();
+  VectorGraph<locint>::iterator* r_iter = r->get_iterator();
+  bool has_next = r_iter->reset();
   locint p;
   double pw;
   while (has_next) {
-    has_next = r->get_next(p, pw);
+    has_next = r_iter->get_next(p, pw);
 //    std::cout << p << "," << pw << std::endl;
     if (pw != 0.0) {
       if (info.y != NULLLOC){
@@ -182,6 +189,7 @@ int hyper_hessian(DerivativeInfo<locint>& info,
     }
   } // if (w != 0)
 //  hessian->debug();
+  delete r_iter;
 }
 
 int hyper_adjoints(DerivativeInfo<locint>& info,

@@ -33,9 +33,9 @@ int hyper_tensor(short tag,
   std::cout << "In hyper_tensor" << std::endl;
   hyper_tape(tag, dep, indep, basepoint, ind_map, hyper_index, hyper_value);
 //  hyper_third_reverse(tag, hyper_graph, hyper_index, hyper_value);
-  for(const locint& x: hyper_index) {
-    std::cout << x << std::endl;
-  }
+//  for(const locint& x: hyper_index) {
+//    std::cout << x << std::endl;
+//  }
   hyper_third_reverse(tag, hyper_index, hyper_value, adjoints, hessian, tensor);
 
 // result check
@@ -70,22 +70,26 @@ int hyper_tensor(short tag,
   hessian->debug();
   tensor->debug();
   std::cout << " |T| = " << tensor->get_size() << std::endl;
+
   if (options[0] == 1) {
+    VectorGraph<locint>::iterator* iter = adjoints->get_iterator();
     int n = adjoints->get_size();
     (*nnz) = n;
     free(*rind);
     (*rind) = (unsigned int*) malloc(sizeof(unsigned int) * n);
     free(*values);
     (*values) = (double*) malloc(sizeof(double) * n);
-    has_next = adjoints->reset();
+    has_next = iter->reset();
     int i = 0;
     while(has_next) {
-      has_next = adjoints->get_next(x, w);
+      has_next = iter->get_next(x, w);
       (*rind)[i] = x;
       (*values)[i] = w;
       ++i;
     }
+    delete iter;
   } else if (options[0] == 2) {
+    MatrixGraph<locint>::iterator* iter = hessian->get_iterator();
     int n = hessian->get_size();
     (*nnz) = n;
     free(*rind);
@@ -95,15 +99,17 @@ int hyper_tensor(short tag,
     free(*values);
     (*values) = (double*) malloc(sizeof(double) * n);
     int i = 0;
-    has_next = hessian->reset();
+    has_next = iter->reset();
     while(has_next) {
-      has_next = hessian->get_next(x, y, w);
+      has_next = iter->get_next(x, y, w);
       (*rind)[i] = x;
       (*cind)[i] = y;
       (*values)[i] = w;
       ++i;
     }
+    delete iter;
   }
+
   delete adjoints;
   delete hessian;
   delete tensor;
