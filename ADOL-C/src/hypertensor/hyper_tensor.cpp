@@ -67,6 +67,8 @@ int hyper_tensor(short tag,
   }
 */
   adjoints->debug();
+  hessian->debug();
+  tensor->debug();
   std::cout << " |T| = " << tensor->get_size() << std::endl;
   if (options[0] == 1) {
     int n = adjoints->get_size();

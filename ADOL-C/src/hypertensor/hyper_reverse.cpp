@@ -13,7 +13,7 @@ int hyper_third(DerivativeInfo<locint>& info,
                 double w,
                 VectorGraph<locint>* r,
                 MatrixGraph<locint>* e) {
-  std::cout << "In tensor " << std::endl;
+//  std::cout << "In tensor " << std::endl;
 
   locint p;
   locint q;
@@ -127,8 +127,7 @@ int hyper_hessian(DerivativeInfo<locint>& info,
                   MatrixGraph<locint>* hessian,
                   double w,
                   VectorGraph<locint>* r) {
-  std::cout << "In hessian" << std::endl;
-//  r->debug();
+//  std::cout << "In hessian" << std::endl;
   bool has_next = r->reset();
   locint p;
   double pw;

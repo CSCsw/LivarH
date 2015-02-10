@@ -71,7 +71,7 @@ enum OPCODES {
   abs_val,
   eq_zero,
   neq_zero,
-  le_zero,
+  le_zero, // 50
   gt_zero,
   ge_zero,
   lt_zero,
@@ -81,7 +81,7 @@ enum OPCODES {
   ceil_op,
   floor_op,
   ext_diff,
-  ext_diff_iArr,
+  ext_diff_iArr, // 60
   ignore_me,
   subscript = 80,
   subscript_ref,

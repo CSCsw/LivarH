@@ -218,9 +218,12 @@ int hyper_third_reverse(short tag,
         {
           double w = adjoints->get_and_erase(info.r);
           VectorGraph<locint>* r = hessian->get_and_erase(info.r);
+          MatrixGraph<locint>* e = tensor->get_and_erase(info.r);
+          hyper_third(info, adjoints, hessian, tensor, w, r, e);
           hyper_hessian(info, adjoints, hessian, w, r);
           hyper_adjoints(info, adjoints, w);
           delete r;
+          delete e;
         }
         
         res = info.y;
@@ -242,9 +245,12 @@ int hyper_third_reverse(short tag,
         {
           double w = adjoints->get_and_erase(info.r);
           VectorGraph<locint>* r = hessian->get_and_erase(info.r);
+          MatrixGraph<locint>* e = tensor->get_and_erase(info.r);
+          hyper_third(info,adjoints, hessian, tensor, w, r, e);
           hyper_hessian(info, adjoints, hessian, w, r);
           hyper_adjoints(info, adjoints, w);
           delete r;
+          delete e;
         }
         
         res = info.y;
@@ -362,7 +368,6 @@ int hyper_third_reverse(short tag,
         info.x = GET_LAST_INDEX;
         r = GET_LAST_VALUE;
         x = GET_LAST_VALUE;
-        std::cout << r << " = sqrt : " << x << std::endl;
         if (x == 0.0) {
           info.dx = 0.0;
           info.pxx = 0.0;
