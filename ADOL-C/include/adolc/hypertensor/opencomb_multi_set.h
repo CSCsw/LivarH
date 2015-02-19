@@ -22,7 +22,7 @@ class OpenCombMultiSet {
   void debug() const;
   bool find(T target) const;
   void clear();
-
+  void mapto(std::vector<T>& map, OpenCombMultiSet<T>& to);
   class iterator {
    public:
     iterator();
@@ -55,6 +55,17 @@ class OpenCombMultiSet {
  private:
   std::multiset<T> data;
 };
+
+template <typename T>
+void OpenCombMultiSet<T>::mapto(std::vector<T>& map,
+                                OpenCombMultiSet<T>& to) {
+  to.clear();
+  typename std::multiset<T>::iterator iter = data.begin();
+  while(iter != data.end()) {
+    to.put(map[*iter]);
+    ++iter;
+  }
+}
 
 template <typename T>
 OpenCombMultiSet<T>::iterator::iterator() {
