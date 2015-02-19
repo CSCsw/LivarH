@@ -1,5 +1,5 @@
-#ifndef __HYPER_MAIN_H__
-#define __HYPER_MAIN_H__
+#ifndef HYPER_TENSOR_H_
+#define HYPER_TENSOR_H_
 
 int hyper_tensor(short tag,
                  int dep,
@@ -15,4 +15,4 @@ int hyper_tensor(short tag,
 
 
 
-#endif // __HYPER_MAIN_H__
+#endif // HYPER_TENSOR_H_

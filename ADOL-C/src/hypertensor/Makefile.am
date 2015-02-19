@@ -18,4 +18,7 @@ MAINTAINERCLEANFILES     = Makefile.in *~ *.orig
 
 noinst_LTLIBRARIES       = libhypertensor.la
 
-libhypertensor_la_SOURCES = hyper_tensor.cpp hyper_tape.cpp hyper_third_reverse.cpp hyper_reverse.cpp
+libhypertensor_la_SOURCES = hyper_tensor.cpp hyper_tape.cpp\
+                            hyper_third_reverse.cpp hyper_reverse.cpp\
+                            generic_tensor.cpp generic_reverse.cpp \
+                            generic_derivative_table.cpp
