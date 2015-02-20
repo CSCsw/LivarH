@@ -21,6 +21,7 @@ class OpenCombMultiSet {
   int size() const;
   void debug() const;
   bool find(T target) const;
+  int count(T target) const;
   void clear();
   void mapto(std::vector<T>& map, OpenCombMultiSet<T>& to);
   class iterator {
@@ -206,6 +207,11 @@ bool OpenCombMultiSet<T>::find(T target) const {
     return true;
   }
   return false;
+}
+
+template <typename T>
+int OpenCombMultiSet<T>::count(T target) const {
+  return data.count(target);
 }
 
 template <typename T>
