@@ -9,10 +9,8 @@
 
 double c_atan[MAX_ORDER+1][MAX_ORDER+1][MAX_ORDER+1];
 double c_asin[MAX_ORDER+1][MAX_ORDER+1][MAX_ORDER+1];
-double c_acos[MAX_ORDER+1][MAX_ORDER+1][MAX_ORDER+1];
 double c_atanh[MAX_ORDER+1][MAX_ORDER+1][MAX_ORDER+1];
 double c_asinh[MAX_ORDER+1][MAX_ORDER+1][MAX_ORDER+1];
-double c_acosh[MAX_ORDER+1][MAX_ORDER+1][MAX_ORDER+1];
 
 
 
@@ -22,20 +20,28 @@ void special_derivative_table() {
       for (int k=0; k<=MAX_ORDER; k++) {
         c_atan[i][j][k] = 0.0;
         c_asin[i][j][k] = 0.0;
+        c_atanh[i][j][k] = 0.0;
+        c_asinh[i][j][k] = 0.0;
       }
     }  
   }
   c_atan[1][1][0] = 1.0;
   c_asin[1][1][0] = 1.0;
+  c_atanh[1][1][0] = 1.0;
+  c_asinh[1][1][0] = 1.0;
   for (int i=2; i<=MAX_ORDER; i++) {
     for (int j = MAX_ORDER; j>=2; j--) {
       for (int k=0; k < MAX_ORDER; k++) {
         c_atan[i][j][k] = c_atan[i-1][j][k+1] * (k+1);
         c_asin[i][j][k] = c_asin[i-1][j][k+1] * (k+1);
+        c_atanh[i][j][k] = c_atanh[i-1][j][k+1] * (k+1);
+        c_asinh[i][j][k] = c_asinh[i-1][j][k+1] * (k+1);
       }
       for (int k=1; k <= MAX_ORDER; k++) {
         c_atan[i][j][k] += c_atan[i-1][j-1][k-1] * 2 * (1-j);
-        c_asin[i][j][k] += c_asin[i-1][j-1][k-1] * 2 * (j - 1.5);
+        c_asin[i][j][k] += c_asin[i-1][j-1][k-1] * -2 * (1.5 - j);
+        c_atanh[i][j][k] += c_atanh[i-1][j-1][k-1] * -2 * (1-j);
+        c_asinh[i][j][k] += c_asinh[i-1][j-1][k-1] * 2 * (1.5 - j);
       }
     }
   }
@@ -337,22 +343,82 @@ void populate_derivative_table(int order,
       local_gd.increase(term, coval); 
       break;
     case asinh_op:
-      // 1:
+      // n:
       term.clear();
       term.put(info.x);
       local_gd.increase(term, 1.0 / sqrt(1.0 + info.dx * info.dx));
+      if (order > 1) {
+        coval = 1.0 / (1.0 + info.dx * info.dx);
+        double sw = 0;
+        double w = 0;
+        double s = 0;
+        for (int i=2; i <= order; i++) {
+          term.put(info.x);
+          sw = 0;
+          s = sqrt(1.0 + info.dx * info.dx);
+          for (int j=0; j <= i; j++) {
+            w = 1;
+            for (int k = 0; k <= j; k++) {
+              sw += c_asin[i][j][k] * w * s;
+              w = w * info.dx;
+            }
+            s = s * coval;
+          }
+          local_gd.increase(term, sw);
+        }
+      }
       break;
     case acosh_op:
-      // 1:
+      // n:
       term.clear();
       term.put(info.x);
       local_gd.increase(term, 1.0 / sqrt(info.dx * info.dx - 1.0));
+      if (order > 1) {
+        coval = 1.0 / (info.dx * info.dx - 1.0);
+        double sw = 0;
+        double w = 0;
+        double s = 0;
+        for (int i=2; i <= order; i++) {
+          term.put(info.x);
+          sw = 0;
+          s = sqrt(info.dx * info.dx - 1.0);
+          for (int j=0; j <= i; j++) {
+            w = 1;
+            for (int k = 0; k <= j; k++) {
+              sw += c_asin[i][j][k] * w * s;
+              w = w * info.dx;
+            }
+            s = s * coval;
+          }
+          local_gd.increase(term, sw);
+        }
+      }
       break;
     case atanh_op:
-      // 1:
+      // n:
       term.clear();
       term.put(info.x);
       local_gd.increase(term, 1.0 / (1.0 + info.dx * info.dx));
+      if (order > 1) {
+        coval = 1.0 / (1.0 - info.dx * info.dx);
+        double sw = 0;
+        double w = 0;
+        double s = 0;
+        for (int i=2; i <= order; i++) {
+          term.put(info.x);
+          sw = 0.0;
+          s = 1.0;
+          for (int j=0; j <= i; j++) {
+            w = 1.0;
+            for (int k = 0; k <= j; k++) {
+              sw += c_asin[i][j][k] * w * s;
+              w = w * info.dx;
+            }
+            s = s * coval;
+          }
+          local_gd.increase(term, sw);
+        }
+      }
       break;
     case erf_op:
       // 1:
