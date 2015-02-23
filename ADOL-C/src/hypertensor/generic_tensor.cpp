@@ -7,6 +7,7 @@
 #include <adolc/adolc.h>
 #include <adolc/hypertensor/hyper_tape.h>
 #include <adolc/hypertensor/opencomb.h>
+#include <adolc/hypertensor/generic_derivative_table.h>
 #include <adolc/hypertensor/generic_reverse.h>
 
 int generic_tensor(short tag,
@@ -21,6 +22,7 @@ int generic_tensor(short tag,
   GenericDerivative<locint> generic_derivative(d);
   std::cout << "In generic_tensor" << std::endl;
   hyper_tape(tag, dep, indep, basepoint, ind_map, hyper_index, hyper_value);
+  special_derivative_table();
   generic_reverse(tag, d, hyper_index, hyper_value, generic_derivative);
-//  generic_derivative.debug();
+  generic_derivative.debug();
 }

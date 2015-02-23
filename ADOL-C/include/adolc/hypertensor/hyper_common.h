@@ -8,6 +8,8 @@
 
 #define NULLLOC UINT_MAX
 
+#define MAX_ORDER 5
+
 template <typename T>
 void T_SWAP(T&a, T& b) {
   T c = std::move(a);

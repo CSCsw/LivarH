@@ -18,30 +18,7 @@
 
 const double kFactorial[11] = {1, 1, 2, 6, 24, 120, 720,
                                5040, 40320, 362880, 3628800};
-/*
-void generic_derivative_equation(int order,
-                                 locint res,
-                                 GenericDerivative<locint>& global_gd,
-                                 GenericDerivative<locint>& local_gd,
-                                 GenericDerivative<locint>& temp_gd,
-                                 std::vector<locint>& d_set,
-                                 std::vector<
-                                   std::vector<
-                                     std::vector<OpenCombMultiSet<locint> > > >& static_set);
 
-void generate_tuples(int level,
-                     typename std::set<locint>::iterator prev_iter,
-                     int order,
-                     int prec_ind,
-                     std::set<locint>& live_set,
-                     GenericDerivative<locint>& global_gd,
-                     GenericDerivative<locint>& local_gd,
-                     GenericDerivative<locint>& temp_gd,
-                     std::vector<locint>& d_set,
-                     std::vector<
-                       std::vector<
-                         std::vector<OpenCombMultiSet<locint> > > >& static_set);
-*/
 void generic_d_tuples(int order,
                       DerivativeInfo<locint>& info,
                       std::set<locint>& live_set,
@@ -49,63 +26,6 @@ void generic_d_tuples(int order,
                       GenericDerivative<locint>& local_gd,
                       GenericDerivative<locint>& temp_gd);
 
-/*
-
-void generate_static_set(
-    int order,
-    std::vector<std::vector<std::vector<OpenCombMultiSet<locint> > > >& static_set) {
-  static_set.clear();
-  static_set.resize(order);
-  OpenCombMultiSet<locint> temp_multi_set;
-  for(int i=0; i<order; i++) {
-    std::cout << "order = " << i << std::endl;
-    temp_multi_set.put(i);
-    OpenCombMultiSubset<locint> d_subset_generator(temp_multi_set);
-    OpenCombMultiSet<locint> d_subset;
-    OpenCombMultiSet<locint> c_subset;
-    OpenCombPartition<locint> c_partition;
-    std::vector<OpenCombMultiSet<locint> > c_vec;
-    bool has_next = d_subset_generator.init_multi_subset();
-    bool has_next2;
-    int s;
-    int t;
-    while (has_next) {
-      has_next = d_subset_generator.get_next_subset(d_subset, c_subset);
-//      std::cout << "Subset: ";
-//      d_subset.debug();
-//      c_subset.debug();
-//      std::cout << std::endl << "Partitions" << std::endl;
-      s = d_subset.size();
-      has_next2 = c_partition.init_partition(c_subset);
-//    std::cout << has_next2 << "d_size = " << s << std::endl;
-      while (has_next2) {
-        has_next2 = c_partition.get_next_partition(c_vec);
-        std::vector<OpenCombMultiSet<locint> > multi_set_vec;
-        multi_set_vec.clear();
-        t = c_vec.size();
-        multi_set_vec.push_back(std::move(d_subset));
-        for(int l=0; l<t; l++) {
-//          c_vec[l].debug();
-          multi_set_vec.push_back(std::move(c_vec[l]));
-        }
-//        std::cout << std::endl;
-        static_set[i].push_back(std::move(multi_set_vec));
-      }
-    }
-  }
-  std::cout << "generatrion done" << std::endl;
-
-  for (int i = 0; i < order; i++) {
-    for (int j = 0; j< static_set[i].size(); j++) {
-      for(int k = 0; k< static_set[i][j].size(); k++) {
-        static_set[i][j][k].debug();
-      }
-    std::cout << std::endl;
-    }
-  }
-
-}
-*/
 int generic_reverse(short tag,
                     int order,
                     std::vector<locint>& hyper_index,
@@ -124,7 +44,6 @@ int generic_reverse(short tag,
   GenericDerivative<locint> local_gd(order);
   OpenCombMultiSet<locint> d_set;
   std::set<locint> live_set;
-  std::vector<std::set<locint>::iterator > iter_stack;
   unsigned char opcode;
   locint res;
   double coval = 0;
@@ -290,20 +209,44 @@ int generic_reverse(short tag,
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
         POP_LAST_VALUE(3);
+        {
+          info.opcode = plus_a_a;
+          populate_derivative_table(order, info, local_gd);
+          live_set.erase(info.r);
+          global_gd.find_and_erase(info.r, temp_gd);
+          generic_d_tuples(order, info, live_set,
+                           global_gd, local_gd, temp_gd);
+        }
+        local_gd.clear();
+        info.opcode = mult_a_a;
+        info.r = info.y;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
         info.dx = GET_LAST_VALUE;
         info.dy = GET_LAST_VALUE;
+        populate_derivative_table(order, info, local_gd);
         break;
       case eq_min_prod:
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
         POP_LAST_VALUE(3);
+        {
+          info.opcode = min_a_a;
+          populate_derivative_table(order, info, local_gd);
+          live_set.erase(info.r);
+          global_gd.find_and_erase(info.r, temp_gd);
+          generic_d_tuples(order, info, live_set,
+                           global_gd, local_gd, temp_gd);
+        }
+        local_gd.clear();
+        info.opcode = mult_a_a;
+        info.r = info.y;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
         info.dx = GET_LAST_VALUE;
         info.dy = GET_LAST_VALUE;
+        populate_derivative_table(order, info, local_gd);
         break;
       case pos_sign_a:
         info.r = GET_LAST_INDEX;
@@ -476,13 +419,8 @@ int generic_reverse(short tag,
     opcode = get_op_r();
     // This is where we should do the work
     if (info.r != NULLLOC) {
-//      std::cout << "-------" << std::endl;
-//      global_gd.debug();
-//      std::cout << "-------" << std::endl;
       live_set.erase(info.r);
       global_gd.find_and_erase(info.r, temp_gd);
-      iter_stack.clear();
-      iter_stack.resize(order, live_set.begin());
       generic_d_tuples(order, info, live_set,
                        global_gd, local_gd, temp_gd);
     }
@@ -679,7 +617,7 @@ void generic_d_tuples(int order,
                       GenericDerivative<locint>& global_gd,
                       GenericDerivative<locint>& local_gd,
                       GenericDerivative<locint>& temp_gd) {
-/*
+
   std::cout << "global: " << std::endl;
   global_gd.debug();
   std::cout << std::endl;
@@ -691,7 +629,7 @@ void generic_d_tuples(int order,
   std::cout << "temp: " << std::endl;
   temp_gd.debug();
   std::cout << std::endl;
-*/
+
 
   typename GenericDerivative<locint>::iterator local_iter;
   local_iter = local_gd.get_new_iterator();
@@ -702,10 +640,10 @@ void generic_d_tuples(int order,
   bool temp_has_next = temp_iter.init_iterator();
   OpenCombMultiSet<locint> s_set;
   double w;
-  int dx[10];
-  int dy[10];
-  double sw[10];
-  double ssw[100];
+  int dx[MAX_ORDER+1];
+  int dy[MAX_ORDER+1];
+  double sw[MAX_ORDER+1];
+  double ssw[(MAX_ORDER+1)*(MAX_ORDER+1)];
   if (info.y != NULLLOC) {
     //binary case
     while (temp_has_next) {
@@ -775,9 +713,9 @@ void generic_d_tuples(int order,
       temp_has_next = temp_iter.move_to_next();
     }
   }
-/*
+
   std::cout << "new global:" << std::endl;
   global_gd.debug();
   std::cout << std::endl; 
-*/
+
 }

@@ -4,6 +4,9 @@
 #include "adolc/adolc.h"
 #include "adolc/hypertensor/hyper_common.h"
 #include "adolc/hypertensor/generic_derivative.h"
+
+void special_derivative_table();
+
 void populate_derivative_table(int order,
                                DerivativeInfo<locint>& info,
                                GenericDerivative<locint>& local_gd);
