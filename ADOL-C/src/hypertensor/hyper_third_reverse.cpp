@@ -34,6 +34,8 @@ int hyper_third_reverse(short tag,
                         VectorGraph<locint>* adjoints,
                         MatrixGraph<locint>* hessian,
                         HyperGraph<locint>* tensor) {
+  ADOLC_OPENMP_THREAD_NUMBER;
+  ADOLC_OPENMP_GET_THREAD_NUMBER;
   std::cout << "In hyper_third_reverse " << std::endl;
   unsigned char opcode;
   locint res;

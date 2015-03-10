@@ -1,3 +1,4 @@
+#include <adolc/adolc.h>
 #ifdef NO_PRE_ACC
 void edge_pushing_s(short           tnum,
                     map<locint, map<locint,double> > *graph,
@@ -33,7 +34,8 @@ void edge_pushing_pre_s(short           tnum,
     int dl=0;
     int r;
 #endif
-
+    ADOLC_OPENMP_THREAD_NUMBER;
+    ADOLC_OPENMP_GET_THREAD_NUMBER;
     unsigned int i,j;
     locint p;
     double w;

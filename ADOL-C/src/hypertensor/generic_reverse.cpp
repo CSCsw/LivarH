@@ -39,6 +39,8 @@ int generic_reverse(short tag,
           std::vector<OpenCombMultiSet<locint> > > > static_set;
   generate_static_set(order, static_set);
 */
+  ADOLC_OPENMP_THREAD_NUMBER;
+  ADOLC_OPENMP_GET_THREAD_NUMBER;
   DerivativeInfo<locint> info;
   GenericDerivative<locint> temp_gd(order);
   GenericDerivative<locint> local_gd(order);

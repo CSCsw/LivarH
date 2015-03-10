@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include "oplate.h"
+#include <adolc/adolc.h>
 #include <adolc/adalloc.h>
 #include <adolc/interfaces.h>
 #include "taping_p.h"
@@ -61,6 +62,8 @@ int edge_tape(short tnum,                         /* tape id */
               unsigned int*   edge_value_len_p,   /* The length of edge_value[] */
               locint*         max_index_p)        /* The max index (after translation)    */
 {
+    ADOLC_OPENMP_THREAD_NUMBER;
+    ADOLC_OPENMP_GET_THREAD_NUMBER;
     unsigned int edge_t_new_len;
     unsigned int edge_t_old_len;
     unsigned int *edge_t_index;

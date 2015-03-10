@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "oplate.h"
+#include <adolc/adolc.h>
 #include <adolc/adalloc.h>
 #include <adolc/interfaces.h>
 #include "taping_p.h"
@@ -45,6 +46,8 @@ int hyper_tape(short tag,
   double* d = NULL;
   int i;
 
+  ADOLC_OPENMP_THREAD_NUMBER;
+  ADOLC_OPENMP_GET_THREAD_NUMBER;
   locint index_ind = 0;
   locint max_ind = 0;
   std::map<locint, locint> index_translate; 
