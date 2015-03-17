@@ -11,11 +11,14 @@ class GenericDerivative {
  public:
   GenericDerivative(): d(0) {};
   GenericDerivative(int order): d(order) {info.resize(d);};
+  GenericDerivative(char* const byte, const int mpi_recv_size);
   void clear();
   void increase(const OpenCombMultiSet<T>& set, double v);
   double get(const OpenCombMultiSet<T>& set);
   void debug() const;
   void find_and_erase(T target, GenericDerivative& gd);
+  char* to_byte();
+  int byte_size();
   class iterator {
    public:
     iterator() {};
@@ -36,7 +39,8 @@ class GenericDerivative {
   typename GenericDerivative<T>::iterator get_new_iterator();
 
  private:
-  const int d; // The highest order
+  int d; // The highest order
+  size_t mpi_byte_size;
   std::vector<std::map<OpenCombMultiSet<T>, double> > info;
 };
 
@@ -154,7 +158,7 @@ bool GenericDerivative<T>::iterator::move_to_next() {
 
 template <typename T>
 void GenericDerivative<T>::find_and_erase(T target,
-                                        GenericDerivative<T>& gd) {
+                                          GenericDerivative<T>& gd) {
   gd.clear();
   typename std::vector<std::map<OpenCombMultiSet<T>, double> >::iterator v_iter;
   typename std::map<OpenCombMultiSet<T>, double >::iterator m_iter;
@@ -173,4 +177,74 @@ void GenericDerivative<T>::find_and_erase(T target,
     ++v_iter;
   }
 }
+
+template <typename T>
+char* GenericDerivative<T>::to_byte() {
+  mpi_byte_size = 0;
+  // order
+  mpi_byte_size += sizeof(int);
+  typename std::vector<std::map<OpenCombMultiSet<T>, double> >::iterator v_iter;
+  typename std::map<OpenCombMultiSet<T>, double>::iterator m_iter;
+  v_iter = info.begin();
+  while(v_iter != info.end()) {
+    m_iter = (*v_iter).begin();
+    while(m_iter != (*v_iter).end()) {
+      mpi_byte_size += sizeof(int);
+      mpi_byte_size += m_iter->first.size() * sizeof(T);
+      mpi_byte_size += sizeof(double);
+      ++m_iter;
+    }
+    ++v_iter;
+  }
+  char* ret = (char*)malloc(mpi_byte_size);
+  char* p = ret;
+  *(int*)p = d;
+  p+=sizeof(int);
+  v_iter = info.begin();
+  while(v_iter != info.end()) {
+    m_iter = (*v_iter).begin();
+    while(m_iter != (*v_iter).end()) {
+      *(int*)p = m_iter->first.size();
+      p += sizeof(int);
+      m_iter->first.write_to_byte(p);
+      p += m_iter->first.size() * sizeof(T);
+      *(double*)p = m_iter->second;
+      p += sizeof(double);
+      ++m_iter;
+    }
+    ++v_iter;
+  }
+  return ret;
+}
+
+template <typename T>
+int GenericDerivative<T>::byte_size() { 
+  return mpi_byte_size;
+}
+
+template <typename T>
+GenericDerivative<T>::GenericDerivative(char* const byte,
+                                        const int mpi_recv_size) {
+  char* p = byte;
+  int k = 0;
+  double w;
+  d = *((int*)p);
+  info.clear();
+  info.resize(d);
+  p += sizeof(int);
+  mpi_byte_size = sizeof(int);
+  while(mpi_byte_size < mpi_recv_size) {
+    k = *((int*)p);
+    p += sizeof(int);
+    mpi_byte_size += sizeof(int);
+    OpenCombMultiSet<T> multi_set(p, k);
+    p += sizeof(T) * k;
+    mpi_byte_size += sizeof(T) * k;
+    w = *((double*)p);
+    info[k-1][multi_set] += w;
+    p += sizeof(double);
+    mpi_byte_size += sizeof(double);    
+  }
+}
+
 #endif // GENERIC_DERIVATIVE_H_

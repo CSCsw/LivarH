@@ -9,7 +9,7 @@
 #include <adolc/interfaces.h>
 #include "taping_p.h"
 #include <adolc/hypertensor/hyper_common.h>
-#include <adolc/hypertensor/hyper_tape.h>
+#include <adolc/hypertensor/generic_tape.h>
 
 #define TRANSLATE_ARG(arg) (index_translate[arg])
 #define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
@@ -19,7 +19,7 @@
 
 #define TEMP_INDEX (NULLLOC - 1)
 
-locint translate_result(std::map<locint, locint>& index_translate,
+static locint translate_result(std::map<locint, locint>& index_translate,
                                locint& max_ind,
                                locint res) {
   locint ret = max_ind;
@@ -28,14 +28,16 @@ locint translate_result(std::map<locint, locint>& index_translate,
   return ret;
 }
 
-int hyper_tape(short tag,
-               int depcheck,
-               int indcheck,
-               const double* basepoint,
-               std::map<locint, locint>& ind_map,
-               std::vector<locint>& hyper_index,
-               std::vector<double>& hyper_value) {
-  std::cout << "In hyper_tape" << std::endl;
+extern std::vector<double> dummy_ind_vec;
+
+int generic_tape(short tag,
+                 int depcheck,
+                 int indcheck,
+                 const double* basepoint,
+                 std::map<locint, locint>& ind_map,
+                 std::vector<locint>& hyper_index,
+                 std::vector<double>& hyper_value) {
+  std::cout << "In generic_tape" << std::endl;
   unsigned char opcode;
   locint size = 0;
   locint res = 0;
@@ -53,9 +55,8 @@ int hyper_tape(short tag,
   std::map<locint, locint> index_translate; 
 
   init_for_sweep(tag);
-/*
-  if ((depcheck != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS]) ||
-     (indcheck != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) ) {
+
+  if (indcheck+dummy_ind_vec.size() != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) {
     fprintf(DIAG_OUT,"ADOL-C error: Tape_doc on tape %d  aborted!\n",tag);
     fprintf(DIAG_OUT,"Number of dependent (%d) and/or independent (%d) "
             "variables passed to Tape_doc is\ninconsistent with "
@@ -64,7 +65,7 @@ int hyper_tape(short tag,
             (int)ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]);
     exit (-1);
   }
-*/
+
   double *dp_T0 = NULL;
   dp_T0 = new double[ADOLC_CURRENT_TAPE_INFOS.stats[NUM_MAX_LIVES]];
   opcode = get_op_f();
@@ -128,7 +129,14 @@ int hyper_tape(short tag,
         break;
       case assign_ind:
         res = get_locint_f();
-        dp_T0[res] = basepoint[index_ind++];
+        if (index_ind < indcheck) {
+          dp_T0[res] = basepoint[index_ind];
+        } else if (index_ind < indcheck + dummy_ind_vec.size()){
+          dp_T0[res] = dummy_ind_vec[index_ind - indcheck];
+        } else {
+          std::cout << "FATAL error in dummy independent!" << std::endl;
+        }
+        index_ind++;
         hyper_index.push_back(TRANSLATE_IND(res));
         hyper_value.push_back(dp_T0[res]);
         std::cout << res << " I--> " << index_translate[res] << " = " << dp_T0[res] << std::endl;

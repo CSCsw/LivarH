@@ -25,4 +25,9 @@ libhypertensorinclude_HEADERS = VectorGraph.h VectorGraphMap.h \
                                 generic_derivative.h\
                                 generic_tensor.h\
                                 generic_reverse.h\
-                                generic_derivative_table.h
+                                generic_derivative_table.h\
+                                generic_mpi_trace.h\
+                                generic_mpi.h\
+                                generic_mpi_tensor.h\
+                                generic_mpi_reverse.h\
+                                generic_tape.h

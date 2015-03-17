@@ -10,6 +10,7 @@ class OpenCombMultiSet {
   OpenCombMultiSet();
   OpenCombMultiSet(const OpenCombMultiSet& rsh);
   OpenCombMultiSet(const OpenCombMultiSet&& rhs);
+  OpenCombMultiSet(char* const buf, const int t_size);
   OpenCombMultiSet& operator = (const OpenCombMultiSet& rhs);
   OpenCombMultiSet& operator = (const OpenCombMultiSet&& rhs);
   inline bool operator == (const OpenCombMultiSet<T>& rhs) const;
@@ -22,8 +23,8 @@ class OpenCombMultiSet {
   void debug() const;
   bool find(T target) const;
   int count(T target) const;
+  void write_to_byte(char* buf) const;
   void clear();
-  void mapto(std::vector<T>& map, OpenCombMultiSet<T>& to);
   class iterator {
    public:
     iterator();
@@ -56,17 +57,6 @@ class OpenCombMultiSet {
  private:
   std::multiset<T> data;
 };
-
-template <typename T>
-void OpenCombMultiSet<T>::mapto(std::vector<T>& map,
-                                OpenCombMultiSet<T>& to) {
-  to.clear();
-  typename std::multiset<T>::iterator iter = data.begin();
-  while(iter != data.end()) {
-    to.put(map[*iter]);
-    ++iter;
-  }
-}
 
 template <typename T>
 OpenCombMultiSet<T>::iterator::iterator() {
@@ -199,6 +189,28 @@ int OpenCombMultiSet<T>::remove(T element) {
 template <typename T>
 int OpenCombMultiSet<T>::size() const {
   return data.size();
+}
+
+template <typename T>
+void OpenCombMultiSet<T>::write_to_byte(char* buf) const {
+  char* p = buf;
+  typename std::multiset<T>::iterator iter;
+  iter = data.begin();
+  while(iter != data.end()) {
+    *((T*)p) = (*iter);
+    p += sizeof(T);
+    ++iter;
+  }
+}
+
+template <typename T>
+OpenCombMultiSet<T>::OpenCombMultiSet(char* const buf, const int t_size) {
+  char* p = buf;
+  data.clear();
+  for(int i = 0; i < t_size; i++) {
+    data.insert(*((T*)p));
+    p += sizeof(T);
+  }
 }
 
 template <typename T>

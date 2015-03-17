@@ -1,13 +1,14 @@
 #include <vector>
 #include <iostream>
-#include "mpi.h"
+#include <mpi.h>
+#include <adolc/adolc.h>
+#include <adolc/hypertensor/generic_mpi_trace.h>
 
-
-static std::vector<SRinfo> srinfo;
-
+// This is a toy implementation of the SendRecv Stack
+static std::vector<SRinfo> sr_stack;
 
 void RMPI_trace_init() {
-  srinfo.clear();
+  sr_stack.clear();
 }
 
 void put_mpi_trace(int sr_tag,
@@ -17,5 +18,12 @@ void put_mpi_trace(int sr_tag,
                    int tag,
                    MPI_Comm comm) {
   SRinfo sr_info(sr_tag, loc, count, peer, tag, comm);
-  srinfo.push_back(sr_info);
+  sr_stack.push_back(sr_info);
 }
+
+/*
+void get_mpi_trace(SRInfo& sr_info) {
+  sr_info = sr_stack.back();
+  sr_stack.pop_back();
+}
+*/
