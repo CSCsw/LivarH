@@ -6,6 +6,8 @@
 #include <limits.h>
 #include <adolc/adolc.h>
 
+#define LOCINT_PER_PROC 100000000
+
 int generic_tape(short tag,
                  int dep,
                  int indep,

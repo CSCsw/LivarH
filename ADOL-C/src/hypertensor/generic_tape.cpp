@@ -10,15 +10,27 @@
 #include "taping_p.h"
 #include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/generic_tape.h>
-
+#include <adolc/hypertensor/generic_mpi_trace.h>
+#include "mpi.h"
+/*
 #define TRANSLATE_ARG(arg) (index_translate[arg])
 #define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
 
 #define TRANSLATE_IND(ind) TRANSLATE_RES(ind)
 #define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
+*/
+
+#define TRANSLATE_ARG(arg) (arg + max_ind)
+#define TRANSLATE_RES(res) (res + max_ind)
+#define TRANSLATE_IND(ind) (ind + max_ind)
+#define TRANSLATE_DEP(dep) (dep + max_ind)
 
 #define TEMP_INDEX (NULLLOC - 1)
 
+extern std::vector<SRinfo> sr_stack;
+extern std::vector<double> dummy_ind_vec;
+
+/*
 static locint translate_result(std::map<locint, locint>& index_translate,
                                locint& max_ind,
                                locint res) {
@@ -27,9 +39,7 @@ static locint translate_result(std::map<locint, locint>& index_translate,
   index_translate[res] = ret;
   return ret;
 }
-
-extern std::vector<double> dummy_ind_vec;
-
+*/
 int generic_tape(short tag,
                  int depcheck,
                  int indcheck,
@@ -52,8 +62,13 @@ int generic_tape(short tag,
   ADOLC_OPENMP_GET_THREAD_NUMBER;
   locint index_ind = 0;
   locint max_ind = 0;
-  std::map<locint, locint> index_translate; 
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  max_ind = myid * LOCINT_PER_PROC;
 
+  std::map<locint, locint> index_translate; 
+  std::vector<SRinfo>::iterator sr_iter;
+  sr_iter = sr_stack.begin();
   init_for_sweep(tag);
 
   if (indcheck+dummy_ind_vec.size() != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) {
@@ -101,12 +116,12 @@ int generic_tape(short tag,
         arg = get_locint_f();
         res = get_locint_f();
         dp_T0[res] = dp_T0[arg];
-        std::cout << res << " <--- " << arg << std::endl;
+//        std::cout << res << " <--- " << arg << std::endl;
         hyper_index.push_back(TRANSLATE_ARG(arg));
         hyper_index.push_back(TRANSLATE_RES(res));
         hyper_value.push_back(dp_T0[arg]);
         hyper_value.push_back(dp_T0[res]);
-        std::cout << index_translate[res] << " <--- " << index_translate[arg] << std::endl;
+//        std::cout << index_translate[res] << " <--- " << index_translate[arg] << std::endl;
         break;
       case assign_d:
         res = get_locint_f();
@@ -139,13 +154,13 @@ int generic_tape(short tag,
         index_ind++;
         hyper_index.push_back(TRANSLATE_IND(res));
         hyper_value.push_back(dp_T0[res]);
-        std::cout << res << " I--> " << index_translate[res] << " = " << dp_T0[res] << std::endl;
+//        std::cout << res << " I--> " << index_translate[res] << " = " << dp_T0[res] << std::endl;
         break;
       case assign_dep:
         res = get_locint_f();
         hyper_index.push_back(TRANSLATE_DEP(res));
         hyper_value.push_back(dp_T0[res]);
-        std::cout << res << " D--> " << hyper_index.back() << std::endl;
+//        std::cout << res << " D--> " << hyper_index.back() << std::endl;
         break;
       case eq_plus_d:
         res = get_locint_f();
@@ -203,9 +218,9 @@ int generic_tape(short tag,
         break;
       case incr_a:
         res = get_locint_f();
-        std::cout << "D[" << res << "]" << dp_T0[res] << std::endl;
+//        std::cout << "D[" << res << "]" << dp_T0[res] << std::endl;
         dp_T0[res]++;
-        std::cout << "D[" << res << "]" << dp_T0[res] << std::endl;
+//        std::cout << "D[" << res << "]" << dp_T0[res] << std::endl;
         break;
       case decr_a:
         res = get_locint_f();
@@ -222,9 +237,9 @@ int generic_tape(short tag,
         dp_T0[res] = dp_T0[arg1] + dp_T0[arg2];
         hyper_index.push_back(TRANSLATE_RES(res));
         hyper_value.push_back(dp_T0[res]);
-        std::cout << arg1 << " ---> " << index_translate[arg1] << std::endl;
-        std::cout << arg2 << " ---> " << index_translate[arg2] << std::endl;
-        std::cout << res << " ---> " << index_translate[res] << std::endl;
+//        std::cout << arg1 << " ---> " << index_translate[arg1] << std::endl;
+//        std::cout << arg2 << " ---> " << index_translate[arg2] << std::endl;
+//        std::cout << res << " ---> " << index_translate[res] << std::endl;
         break;
       case plus_d_a:
         arg = get_locint_f();
@@ -617,8 +632,26 @@ int generic_tape(short tag,
         get_locint_f();
       case ignore_me:
         break;
+      case ampi_send:
+        if (sr_iter->SR_tag == RMPI_SEND_TAG) {
+          res = sr_iter->loc;
+          sr_iter->loc = TRANSLATE_ARG(res); 
+        } else {
+          std::cout << "GENERIC MPI: Send trace error." << std::endl;
+        }
+        sr_iter++;  
+        break;
+      case ampi_recv:
+        if (sr_iter->SR_tag == RMPI_RECV_TAG) {
+          res = sr_iter->loc;
+          sr_iter->loc = TRANSLATE_ARG(res); 
+        } else {
+          std::cout << "GENERIC MPI: Recv trace error." << std::endl;
+        }
+        sr_iter++;
+        break;
       default:
-        fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
+        fprintf(DIAG_OUT, "GENERIC-TENSOR: unimplemented opcode %d\n", opcode);
     }
     opcode = get_op_f();
   }

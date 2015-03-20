@@ -45,6 +45,7 @@ void special_derivative_table() {
       }
     }
   }
+/*
   for (int i=0; i<=MAX_ORDER; i++) {
     for (int j=0; j<=MAX_ORDER; j++) {
       for (int k=0; k<=MAX_ORDER; k++) {
@@ -55,6 +56,7 @@ void special_derivative_table() {
       }
     }  
   }
+*/
 }
 
 void populate_derivative_table(int order,

@@ -47,14 +47,16 @@ int RMPI_Send(void* buf,
   if (datatype == RMPI_ADOUBLE) {
     std::cout << "Active type" << std::endl;
 // 1 Generate a dummy dependent variable
-    double dummy_dep;
+    double dummy_dep_v;
     adouble* adouble_p = (adouble*)buf;
-    adouble_p[0] >>= dummy_dep;
+    adouble* dummy_dep = new adouble[count];
+    dummy_dep[0] = adouble_p[0];
+    dummy_dep[0] >>= dummy_dep_v;
     std::cout << "dummy_dep = " << dummy_dep << std::endl;
 // 2 Record on MPI trace
     if (ADOLC_CURRENT_TAPE_INFOS.traceFlag) {
       put_op(ampi_send);
-      put_mpi_trace(RMPI_SEND_TAG, adouble_p->loc(), count, dest, tag, comm);
+      put_mpi_trace(RMPI_SEND_TAG, dummy_dep[0].loc(), count, dest, tag, comm);
     }
 // 3 Redirect the send buffer
     send_buf = ADOLC_rawData_p(buf, count);
@@ -92,16 +94,18 @@ int RMPI_Recv(void* buf,
   if (datatype == RMPI_ADOUBLE) {
 // 2 Generate a dummy independent variable
     adouble* adouble_p = (adouble*)buf;
-    adouble dummy_ind;
-    dummy_ind <<= ((double*)recv_buf)[0];
-    adouble_p[0] = dummy_ind;
-    dummy_ind_vec.push_back(((double*)recv_buf)[0]);
+    adouble* dummy_ind = new adouble[count];
+    dummy_ind[0] <<= ((double*)recv_buf)[0];
 
 // 3 Record on MPI trace
     if (ADOLC_CURRENT_TAPE_INFOS.traceFlag) {
       put_op(ampi_recv);
-      put_mpi_trace(RMPI_RECV_TAG, adouble_p->loc(), count, src, tag, comm);
+      put_mpi_trace(RMPI_RECV_TAG, dummy_ind[0].loc(), count, src, tag, comm);
     }
+
+    adouble_p[0] = dummy_ind[0];
+    dummy_ind_vec.push_back(((double*)recv_buf)[0]);
+
     std::cout << adouble_p->loc() << " <--- [" << src << "]" << std::endl; 
   }
   return rc;

@@ -5,7 +5,7 @@
 #include <adolc/hypertensor/generic_mpi_trace.h>
 
 // This is a toy implementation of the SendRecv Stack
-static std::vector<SRinfo> sr_stack;
+std::vector<SRinfo> sr_stack;
 
 void RMPI_trace_init() {
   sr_stack.clear();

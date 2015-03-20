@@ -12,6 +12,9 @@
 #include <adolc/hypertensor/generic_reverse.h>
 #include <adolc/hypertensor/opencomb.h>
 #include <sys/time.h>
+#include "mpi.h"
+
+#define DEBUG_ID 99
 
 #define GET_LAST_INDEX hyper_index.back(); hyper_index.pop_back();
 #define GET_LAST_VALUE hyper_value.back(); hyper_value.pop_back();
@@ -614,7 +617,9 @@ void generic_d_tuples(int order,
                       GenericDerivative<locint>& global_gd,
                       GenericDerivative<locint>& local_gd,
                       GenericDerivative<locint>& temp_gd) {
-
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+if (myid == DEBUG_ID) {
   std::cout << "global: " << std::endl;
   global_gd.debug();
   std::cout << std::endl;
@@ -626,7 +631,7 @@ void generic_d_tuples(int order,
   std::cout << "temp: " << std::endl;
   temp_gd.debug();
   std::cout << std::endl;
-
+}
 
   typename GenericDerivative<locint>::iterator local_iter;
   local_iter = local_gd.get_new_iterator();
@@ -678,6 +683,8 @@ void generic_d_tuples(int order,
       }
       temp_has_next = temp_iter.move_to_next();
     }
+    live_set.insert(info.y);
+    live_set.insert(info.x);
   } else if (info.x != NULLLOC) {
     //unary case
     while (temp_has_next) {
@@ -709,10 +716,11 @@ void generic_d_tuples(int order,
       }
       temp_has_next = temp_iter.move_to_next();
     }
+    live_set.insert(info.x);
   }
-
+if (myid == DEBUG_ID) {
   std::cout << "new global:" << std::endl;
   global_gd.debug();
   std::cout << std::endl; 
-
+}
 }

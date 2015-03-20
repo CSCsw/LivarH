@@ -9,12 +9,18 @@
 #include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/generic_derivative.h>
 #include <adolc/hypertensor/generic_derivative_table.h>
+#include <adolc/hypertensor/generic_mpi_trace.h>
+#include <adolc/hypertensor/generic_reverse.h>
 #include <adolc/hypertensor/opencomb.h>
 #include <sys/time.h>
+#include "mpi.h"
 
 #define GET_LAST_INDEX hyper_index.back(); hyper_index.pop_back();
 #define GET_LAST_VALUE hyper_value.back(); hyper_value.pop_back();
 #define POP_LAST_VALUE(n) for(int i = 0; i < n; ++i) {hyper_value.pop_back();}
+
+#define DEBUG_ID 0
+extern std::vector<SRinfo> sr_stack;
 
 void generic_mpi_process_sac(int order,
                              DerivativeInfo<locint>& info,
@@ -23,17 +29,11 @@ void generic_mpi_process_sac(int order,
                              GenericDerivative<locint>& temp_gd,
                              std::map<locint, GenericDerivative<locint> >& global_gd);
 
-void generic_d_tuples(int order,
-                      DerivativeInfo<locint>& info,
-                      std::set<locint>& live_set,
-                      GenericDerivative<locint>& global_gd,
-                      GenericDerivative<locint>& local_gd,
-                      GenericDerivative<locint>& temp_gd);
-
 int generic_mpi_reverse(short tag,
                        int order,
                        std::vector<locint>& hyper_index,
                        std::vector<double>& hyper_value,
+                       std::map<locint, std::set<locint> >& live_set,
                        std::map<locint, GenericDerivative<locint> >& global_gd) {
 //  std::cout << "In generic reverse" << std::endl;
 // static set partition generator
@@ -49,13 +49,14 @@ int generic_mpi_reverse(short tag,
   GenericDerivative<locint> temp_gd(order);
   GenericDerivative<locint> local_gd(order);
   OpenCombMultiSet<locint> d_set;
-  std::map<locint, std::set<locint>> live_set;
   unsigned char opcode;
   locint res;
   double coval = 0;
   double* d = NULL;
   int i;
   double r, x, y;
+  std::vector<SRinfo>::reverse_iterator sr_riter;
+  sr_riter = sr_stack.rbegin();
   init_rev_sweep(tag);
   opcode = get_op_r();
   while(opcode != start_of_tape) {
@@ -82,6 +83,7 @@ int generic_mpi_reverse(short tag,
         info.x = GET_LAST_INDEX;
         POP_LAST_VALUE(2);
         populate_derivative_table(order, info, local_gd);
+        std::cout << info.r << " = " << info.x << std::endl; 
         break;
       case neq_a_a:
       case eq_a_a:
@@ -420,6 +422,38 @@ int generic_mpi_reverse(short tag,
         populate_derivative_table(order, info, local_gd);
         break;
 #endif // ATRIG_ERF
+      case ampi_send:
+        if (sr_riter->SR_tag == RMPI_SEND_TAG) {
+        } else {
+          std::cout << "Generic MPI reverse trace Send ERROR!" << std::endl;
+        }
+        ++sr_riter;        
+        break;
+      case ampi_recv:
+        if (sr_riter->SR_tag == RMPI_RECV_TAG) {
+          for(int i = 0; i < sr_riter->count; i++) {
+            opcode = get_op_r();
+            if (opcode == assign_ind) {
+              GET_LAST_INDEX;
+              GET_LAST_VALUE;
+            } else {
+              std::cout << "Generic MPI reverse Recv opcode error!" << std::endl;
+            }
+          }
+          for(int i = 0; i < sr_riter->count; i++) {
+            opcode = get_op_r();
+            if (opcode == assign_d_zero) {
+              GET_LAST_INDEX;
+              GET_LAST_VALUE;
+            } else {
+              std::cout << "Generic MPI reverse Recv opcode error!" << std::endl;
+            }
+          }
+        } else {
+          std::cout << "Generic MPI reverse trace RecvERROR!" << std::endl;
+        }
+        ++sr_riter;
+        break;
       default:
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
@@ -439,11 +473,29 @@ void generic_mpi_process_sac(int order,
                              GenericDerivative<locint>& local_gd,
                              GenericDerivative<locint>& temp_gd,
                              std::map<locint, GenericDerivative<locint> >& global_gd) {
+  if (info.r == NULLLOC) {
+    return;
+  }
+/*
+  std::cout << " opcode = " << (int)info.opcode
+            << " r = " << info.r
+            << " x = " << info.x
+            << " y = " << info.y << std::endl;
+*/
   typename std::map<locint, std::set<locint> >::iterator dep_iter;
   locint dummy_dep;
   dep_iter = live_set.begin();
   while(dep_iter != live_set.end() ) {
     dummy_dep = dep_iter->first;
+/*
+    std::cout << "check dep: " << dummy_dep << "size = " << live_set[dummy_dep].size() << std::endl;
+    typename std::set<locint>::iterator set_iter;
+    set_iter = live_set[dummy_dep].begin();
+    while(set_iter != live_set[dummy_dep].end()) {
+      std::cout << *set_iter << std::endl;
+      ++set_iter;
+    }
+*/
     if (dep_iter->second.find(info.r) != dep_iter->second.end()) {
       // do the work
       live_set[dummy_dep].erase(info.r);
@@ -452,5 +504,268 @@ void generic_mpi_process_sac(int order,
                        global_gd[dummy_dep], local_gd, temp_gd);
     }
     dep_iter++;
+  }
+}
+
+void print_live_set(std::set<locint>& live_set) {
+
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+if (myid == DEBUG_ID) {
+  typename std::set<locint>::iterator iter;
+  iter = live_set.begin();
+  std::cout << "SET: <";
+  while(iter != live_set.end()) {
+    std::cout << " " << *iter;
+    ++iter;
+  }
+  std::cout << ">" << std::endl;
+}
+}
+
+double symmetric_coeff(
+    double w,
+    OpenCombMultiSet<locint>& s_set,
+    std::vector<OpenCombMultiSet<locint> >& set_vec,
+    std::vector<int>& set_count,
+    GenericDerivative<locint>& global_gd) {
+  std::map<locint, int> total_count;
+  std::map<locint, int> local_count;
+  double coeff = 1.0;
+  if (set_vec.size() != set_count.size()) {
+    std::cout << "SIZE mismatch in symmetric coeff" << std::endl;
+    return 0;
+  }
+  OpenCombMultiSet<locint> ss_set(s_set);
+  locint loc;
+  typename OpenCombMultiSet<locint>::iterator iter;
+  iter = s_set.begin();
+  double tg = 1.0;
+  double tl = 1.0;
+  while(iter != s_set.end()) {
+    loc = *iter;
+    total_count[loc]++;
+    local_count[loc]++;
+    tg *= total_count[loc];
+    tl *= local_count[loc];
+    ++iter;
+  }
+  coeff = coeff * tg / tl;
+
+  for(int i = 0; i < set_vec.size(); i++) {
+    for(int j = 0; j < set_count[i]; j++) {
+      local_count.clear();
+      iter = set_vec[i].begin();
+      tg = 1.0;
+      tl = 1.0;
+      while(iter != set_vec[i].end()) {
+        loc = *iter;
+        ss_set.put(loc);
+        total_count[loc]++;
+        local_count[loc]++;
+        tg *= total_count[loc];
+        tl *= local_count[loc];
+        ++iter;
+      }
+      coeff = coeff * tg / (j+1) / tl;
+    }
+  }
+// Debug
+  std::cout << " coeff = " << coeff
+            << " w = " << w << std::endl;
+  for (int i=0; i< set_vec.size(); i++) {
+    set_vec[i].debug();
+    std::cout << std::endl;
+  }
+  global_gd.increase(ss_set, w * coeff);
+}
+
+void compute_multi_set(
+    int curr_level,
+    int max_level,
+    int curr_order,
+    int max_order,
+    double w,
+    typename GenericDerivative<locint>::iterator& prev,
+    std::vector<OpenCombMultiSet<locint> >& set_vec,
+    std::vector<int>& set_count,
+    OpenCombMultiSet<locint>& s_set,
+    GenericDerivative<locint>& global_gd) {
+
+  if (curr_level > max_level) {
+// compute the symmetric coefficient
+    symmetric_coeff(w, s_set, set_vec, set_count, global_gd);    
+    return;
+  }
+
+  int this_order;
+  typename GenericDerivative<locint>::iterator iter = prev;
+  OpenCombMultiSet<locint> dc;
+  double cw;
+  iter.get_curr_pair(dc, cw);
+  dc.debug();
+  std::cout << " cw = " << cw << std::endl;
+  this_order = dc.size();
+  if (curr_level == 1) {
+    set_vec.push_back(dc);
+    set_count.push_back(1);
+  } else  {
+    set_count[set_count.size() - 1]++;
+  }
+  compute_multi_set(curr_level + 1, max_level,
+                    curr_order + this_order, max_order,
+                    cw * w, iter, set_vec, set_count, s_set, global_gd);
+  if (curr_level == 1) {
+    set_vec.pop_back();
+    set_count.pop_back();
+  } else {
+    set_count[set_count.size() - 1]--;
+  }
+  bool has_next = iter.move_to_next();
+  while(has_next) {
+    iter.get_curr_pair(dc, cw);
+//    dc.debug();
+//    std::cout << " cw = " << cw << std::endl;
+    if (w != 0) {
+      this_order = dc.size();
+      set_vec.push_back(std::move(dc));
+      set_count.push_back(1);
+      if (this_order * (max_level - curr_level + 1) + curr_order <= max_order) {
+        compute_multi_set(curr_level + 1, max_level,
+                          curr_order + this_order, max_order,
+                          cw * w, iter,                          
+                          set_vec, set_count, s_set, global_gd);
+      }
+      set_vec.pop_back();
+      set_count.pop_back();
+    }
+    has_next = iter.move_to_next();
+  }
+}
+
+void generic_tuples(int order,
+                    locint res,
+                    std::set<locint>& live_set,
+                    GenericDerivative<locint>& global_gd,
+                    GenericDerivative<locint>& local_gd,
+                    GenericDerivative<locint>& temp_gd) {
+//populare live set
+//  print_live_set(live_set);
+  typename GenericDerivative<locint>::iterator local_iter;
+  local_iter = local_gd.get_new_iterator();
+  bool local_has_next = local_iter.init_iterator();
+  OpenCombMultiSet<locint> s_set;
+  typename OpenCombMultiSet<locint>::iterator s_iter;
+  double w;
+  while(local_has_next) {
+    local_iter.get_curr_pair(s_set, w);
+    s_iter = s_set.begin();
+    while(s_iter != s_set.end()) {
+      live_set.insert(*s_iter);
+      ++s_iter;
+    }
+    local_has_next = local_iter.move_to_next();
+  }
+//  print_live_set(live_set);
+
+// compute derivatives
+  typename GenericDerivative<locint>::iterator temp_iter;
+  temp_iter = temp_gd.get_new_iterator();
+  bool temp_has_next = temp_iter.init_iterator();
+  while(temp_has_next) {
+    temp_iter.get_curr_pair(s_set, w);
+    int t_size = s_set.count(res);
+    int s_size = s_set.size() - t_size;
+    s_set.debug();
+    std::cout << " w = " << w << std::endl;
+
+    while (s_set.count(res) != 0) {
+      s_set.remove(res);
+    }
+
+    local_iter = local_gd.get_new_iterator();
+    std::vector<OpenCombMultiSet<locint> > set_vec;
+    std::vector<int> set_count;
+    local_has_next = local_iter.init_iterator();
+    if (local_has_next) {
+      compute_multi_set(1, t_size, 0, order - s_size, w,
+                        local_iter, set_vec, set_count, s_set, global_gd); 
+    }
+
+    temp_has_next = temp_iter.move_to_next();
+  }
+
+}
+
+void generic_mpi_process_recv_gd(
+    int order,
+    locint res,
+    std::map<locint, std::set<locint> >& live_set,
+    GenericDerivative<locint>& recv_gd,
+    std::map<locint, GenericDerivative<locint> >& global_gd) {
+
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+  GenericDerivative<locint> temp_gd(order);
+  typename std::map<locint, std::set<locint> >::iterator dep_iter;
+  locint dummy_dep;
+  dep_iter = live_set.begin();
+  while(dep_iter != live_set.end() ) {
+    dummy_dep = dep_iter->first;
+    if (dep_iter->second.find(res) != dep_iter->second.end()) {
+      // do the work
+if (myid == DEBUG_ID) {
+//      std::cout << "dummy_dep = " << dummy_dep << "for " << res << std::endl;
+//      global_gd[dummy_dep].debug();
+}
+      live_set[dummy_dep].erase(res);
+      global_gd[dummy_dep].find_and_erase(res, temp_gd);
+      generic_tuples(order, res, live_set[dummy_dep],
+                       global_gd[dummy_dep], recv_gd, temp_gd);
+
+
+    }
+    dep_iter++;
+  }
+}
+
+
+void generic_mpi_forward(int order,
+                         std::map<locint, std::set<locint> >& live_set,
+                         std::map<locint, GenericDerivative<locint> >& global_gd) {
+  int myid;
+  locint loc;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  for(const SRinfo& sr_info: sr_stack) {
+    if (sr_info.SR_tag == RMPI_SEND_TAG) {
+      loc = sr_info.loc;
+//      std::cout << myid << " send " << loc << " to " << sr_info.peer;
+      global_gd[loc].debug();
+      char* buf = global_gd[loc].to_byte();
+      int buf_size = global_gd[loc].byte_size();
+//      std::cout << " send buffer size = " << buf_size << std::endl;
+      MPI_Send(&buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag, sr_info.comm);
+      MPI_Send((void*)buf, buf_size, MPI_CHAR, sr_info.peer, sr_info.tag,
+               sr_info.comm);
+      free(buf);
+      global_gd.erase(loc);
+    } else {
+      loc = sr_info.loc;
+//      std::cout << myid << " recv " << loc << " from " << sr_info.peer;
+      char* buf = NULL;
+      int buf_size = 0;
+      MPI_Recv(&buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
+               sr_info.comm, MPI_STATUS_IGNORE);
+//      std::cout << " recv buffer size = " << buf_size << std::endl;
+      buf = (char*)malloc(sizeof(char) * buf_size);
+      MPI_Recv((void*)buf, buf_size, MPI_CHAR, sr_info.peer, sr_info.tag,
+               sr_info.comm, MPI_STATUS_IGNORE);
+      GenericDerivative<locint> recv_gd(buf, buf_size);
+//      recv_gd.debug();      
+      generic_mpi_process_recv_gd(order, loc,
+                                  live_set, recv_gd, global_gd);
+      free(buf);
+    }
   }
 }
