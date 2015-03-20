@@ -739,33 +739,37 @@ void generic_mpi_forward(int order,
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   for(const SRinfo& sr_info: sr_stack) {
     if (sr_info.SR_tag == RMPI_SEND_TAG) {
-      loc = sr_info.loc;
+      for(int i = 0; i < sr_info.count; i++) { 
+        loc = sr_info.loc + i;
 //      std::cout << myid << " send " << loc << " to " << sr_info.peer;
-      global_gd[loc].debug();
-      char* buf = global_gd[loc].to_byte();
-      int buf_size = global_gd[loc].byte_size();
+        global_gd[loc].debug();
+        char* buf = global_gd[loc].to_byte();
+        int buf_size = global_gd[loc].byte_size();
 //      std::cout << " send buffer size = " << buf_size << std::endl;
-      MPI_Send(&buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag, sr_info.comm);
-      MPI_Send((void*)buf, buf_size, MPI_CHAR, sr_info.peer, sr_info.tag,
-               sr_info.comm);
-      free(buf);
-      global_gd.erase(loc);
+        MPI_Send(&buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag, sr_info.comm);
+        MPI_Send((void*)buf, buf_size, MPI_CHAR, sr_info.peer, sr_info.tag,
+                 sr_info.comm);
+        free(buf);
+        global_gd.erase(loc);
+      }
     } else {
-      loc = sr_info.loc;
+      for(int i = 0; i < sr_info.count; i++) {
+        loc = sr_info.loc + i;
 //      std::cout << myid << " recv " << loc << " from " << sr_info.peer;
-      char* buf = NULL;
-      int buf_size = 0;
-      MPI_Recv(&buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
-               sr_info.comm, MPI_STATUS_IGNORE);
+        char* buf = NULL;
+        int buf_size = 0;
+        MPI_Recv(&buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
+                 sr_info.comm, MPI_STATUS_IGNORE);
 //      std::cout << " recv buffer size = " << buf_size << std::endl;
-      buf = (char*)malloc(sizeof(char) * buf_size);
-      MPI_Recv((void*)buf, buf_size, MPI_CHAR, sr_info.peer, sr_info.tag,
-               sr_info.comm, MPI_STATUS_IGNORE);
-      GenericDerivative<locint> recv_gd(buf, buf_size);
+        buf = (char*)malloc(sizeof(char) * buf_size);
+        MPI_Recv((void*)buf, buf_size, MPI_CHAR, sr_info.peer, sr_info.tag,
+                 sr_info.comm, MPI_STATUS_IGNORE);
+        GenericDerivative<locint> recv_gd(buf, buf_size);
 //      recv_gd.debug();      
-      generic_mpi_process_recv_gd(order, loc,
-                                  live_set, recv_gd, global_gd);
-      free(buf);
+        generic_mpi_process_recv_gd(order, loc,
+                                    live_set, recv_gd, global_gd);
+        free(buf);
+      }
     }
   }
 }
