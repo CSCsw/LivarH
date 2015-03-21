@@ -654,6 +654,9 @@ if (myid == DEBUG_ID) {
       int s_size = s_set.size() - t_size;
 //      s_set.debug();
 //      std::cout << "s_size = " << s_size << ", t_size = "<< t_size<< std::endl;
+      while (s_set.count(info.r) != 0) {
+        s_set.remove(info.r);
+      }
       dx[0] = s_set.count(info.x);
       dy[0] = s_set.count(info.y);
       for (int i=0; i<=(order+1)*(order+1); i++) {ssw[i] = 0;}
@@ -666,9 +669,7 @@ if (myid == DEBUG_ID) {
                              dx,
                              dy,
                              ssw, order, info.x, info.y);
-      while (s_set.count(info.r) != 0) {
-        s_set.remove(info.r);
-      }
+
       for(int i=0; i <= order; i++) {
         OpenCombMultiSet<locint> ss_set(s_set);
         for(int j=0; j<= order; j++) {
@@ -693,6 +694,9 @@ if (myid == DEBUG_ID) {
       int s_size = s_set.size() - t_size;
 //      s_set.debug();
 //      std::cout << "s_size = " << s_size << ", t_size = "<< t_size<< std::endl;
+      while (s_set.count(info.r) != 0) {
+        s_set.remove(info.r);
+      }
       dx[0] = s_set.count(info.x);
       for (int i=0; i<= order; i++) {sw[i] = 0;}
       generate_unary_tuples(1,
@@ -703,9 +707,7 @@ if (myid == DEBUG_ID) {
                             local_iter,
                             dx,
                             sw);
-      while (s_set.count(info.r) != 0) {
-        s_set.remove(info.r);
-      }
+
       for(int i=1; i <= order; i++) {
         s_set.put(info.x);
 //        s_set.debug();

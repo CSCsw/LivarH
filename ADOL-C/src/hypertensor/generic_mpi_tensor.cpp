@@ -50,13 +50,14 @@ int generic_mpi_tensor(short tag,
 
   generic_mpi_forward(d, live_set, generic_derivative);
 
+
   iter = generic_derivative.begin();
-//  if (myid == 0) {
+  if (myid == 0) {
     while(iter != generic_derivative.end() ){
       std::cout << "Derivative For : " << iter->first << std::endl;
       iter->second.debug();
       iter++;
     }
-//  }
+  }
 
 }
