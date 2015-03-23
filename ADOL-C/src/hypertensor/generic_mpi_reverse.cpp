@@ -83,7 +83,7 @@ int generic_mpi_reverse(short tag,
         info.x = GET_LAST_INDEX;
         POP_LAST_VALUE(2);
         populate_derivative_table(order, info, local_gd);
-        std::cout << info.r << " = " << info.x << std::endl; 
+//        std::cout << info.r << " = " << info.x << std::endl; 
         break;
       case neq_a_a:
       case eq_a_a:
@@ -112,7 +112,7 @@ int generic_mpi_reverse(short tag,
           live_set[res].insert(res);
         }
         GET_LAST_VALUE;
-        std::cout << "Dummy Dep: " << res << std::endl;
+//        std::cout << "Dummy Dep: " << res << std::endl;
         break;
       case eq_plus_d:
         break;
@@ -571,12 +571,14 @@ double symmetric_coeff(
     }
   }
 // Debug
+/*
   std::cout << " coeff = " << coeff
             << " w = " << w << std::endl;
   for (int i=0; i< set_vec.size(); i++) {
     set_vec[i].debug();
     std::cout << std::endl;
   }
+*/
   global_gd.increase(ss_set, w * coeff);
 }
 
@@ -603,9 +605,9 @@ void compute_multi_set(
   OpenCombMultiSet<locint> dc;
   double cw;
   iter.get_curr_pair(dc, cw);
-  dc.debug();
-  std::cout << " cw = " << cw << std::endl;
-  this_order = dc.size();
+//  dc.debug();
+//  std::cout << " cw = " << cw << std::endl;
+//  this_order = dc.size();
   if (curr_level == 1) {
     set_vec.push_back(dc);
     set_count.push_back(1);
@@ -676,8 +678,8 @@ void generic_tuples(int order,
     temp_iter.get_curr_pair(s_set, w);
     int t_size = s_set.count(res);
     int s_size = s_set.size() - t_size;
-    s_set.debug();
-    std::cout << " w = " << w << std::endl;
+//    s_set.debug();
+//    std::cout << " w = " << w << std::endl;
 
     while (s_set.count(res) != 0) {
       s_set.remove(res);
@@ -697,34 +699,112 @@ void generic_tuples(int order,
 
 }
 
+bool generic_is_linear(GenericDerivative<locint>& local_gd) {
+//  std::cout << "In checkint : ";
+//  local_gd.debug();
+//  std::cout << std::endl;
+
+  int total_num_elements = 0;
+  OpenCombMultiSet<locint> s_set;
+  double w;
+
+  typename GenericDerivative<locint>::iterator local_iter;
+  local_iter = local_gd.get_new_iterator();
+  bool local_has_next = local_iter.init_iterator();
+  if (local_has_next) {
+    local_iter.get_curr_pair(s_set, w);
+    local_has_next = local_iter.move_to_next();
+    if ((!local_has_next) && (s_set.size() == 1)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void generic_linear_tuples(int order,
+                           locint res,
+                           std::set<locint>& live_set,
+                           GenericDerivative<locint>& global_gd,
+                           GenericDerivative<locint>& local_gd,
+                           GenericDerivative<locint>& temp_gd) {
+//populare live set
+  typename GenericDerivative<locint>::iterator local_iter;
+  local_iter = local_gd.get_new_iterator();
+  bool local_has_next = local_iter.init_iterator();
+  OpenCombMultiSet<locint> s_set;
+  locint x;
+  typename OpenCombMultiSet<locint>::iterator s_iter;
+  double w;
+  local_iter.get_curr_pair(s_set, w);
+  s_iter = s_set.begin();
+  x = *s_iter;
+  live_set.insert(x);
+
+// compute derivatives
+  typename GenericDerivative<locint>::iterator temp_iter;
+  temp_iter = temp_gd.get_new_iterator();
+  bool temp_has_next = temp_iter.init_iterator();
+  double lw = 0;
+  double cw = 0;
+  while(temp_has_next) {
+    temp_iter.get_curr_pair(s_set, lw);
+    int t_size = s_set.count(res);
+    cw = 1;
+    for(int i=0; i < t_size; i++) {
+      s_set.remove(res);
+      s_set.put(x);
+      cw = cw * w;
+    }
+    global_gd.increase(s_set, lw * cw);
+    temp_has_next = temp_iter.move_to_next();
+  }
+}
+
 void generic_mpi_process_recv_gd(
     int order,
     locint res,
     std::map<locint, std::set<locint> >& live_set,
     GenericDerivative<locint>& recv_gd,
     std::map<locint, GenericDerivative<locint> >& global_gd) {
+  typename std::map<locint, std::set<locint> >::iterator dep_iter;
+  locint dummy_dep;
+  GenericDerivative<locint> temp_gd(order);
 
   int myid;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
-  GenericDerivative<locint> temp_gd(order);
-  typename std::map<locint, std::set<locint> >::iterator dep_iter;
-  locint dummy_dep;
+  if (generic_is_linear(recv_gd)) {
+// For linear derivatives, we have a more efficient method
+//    std::cout << " res = " << res << " is linear : ";
+//    recv_gd.debug();
+    std::cout << std::endl;
+    dep_iter = live_set.begin();
+    while(dep_iter != live_set.end() ) {
+      dummy_dep = dep_iter->first;
+      if (dep_iter->second.find(res) != dep_iter->second.end()) {
+        // do the work
+        live_set[dummy_dep].erase(res);
+        global_gd[dummy_dep].find_and_erase(res, temp_gd);
+        generic_linear_tuples(order, res, live_set[dummy_dep],
+                              global_gd[dummy_dep], recv_gd, temp_gd);
+      }
+      dep_iter++;
+    }
+    return;
+  }
+
+
+
+
   dep_iter = live_set.begin();
   while(dep_iter != live_set.end() ) {
     dummy_dep = dep_iter->first;
     if (dep_iter->second.find(res) != dep_iter->second.end()) {
       // do the work
-if (myid == DEBUG_ID) {
-//      std::cout << "dummy_dep = " << dummy_dep << "for " << res << std::endl;
-//      global_gd[dummy_dep].debug();
-}
       live_set[dummy_dep].erase(res);
       global_gd[dummy_dep].find_and_erase(res, temp_gd);
       generic_tuples(order, res, live_set[dummy_dep],
                        global_gd[dummy_dep], recv_gd, temp_gd);
-
-
     }
     dep_iter++;
   }
@@ -739,37 +819,43 @@ void generic_mpi_forward(int order,
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   for(const SRinfo& sr_info: sr_stack) {
     if (sr_info.SR_tag == RMPI_SEND_TAG) {
-      for(int i = 0; i < sr_info.count; i++) { 
-        loc = sr_info.loc + i;
-//      std::cout << myid << " send " << loc << " to " << sr_info.peer;
-        global_gd[loc].debug();
-        char* buf = global_gd[loc].to_byte();
-        int buf_size = global_gd[loc].byte_size();
-//      std::cout << " send buffer size = " << buf_size << std::endl;
-        MPI_Send(&buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag, sr_info.comm);
-        MPI_Send((void*)buf, buf_size, MPI_CHAR, sr_info.peer, sr_info.tag,
-                 sr_info.comm);
-        free(buf);
-        global_gd.erase(loc);
-      }
-    } else {
+      int total_buf_size = 0;
       for(int i = 0; i < sr_info.count; i++) {
         loc = sr_info.loc + i;
-//      std::cout << myid << " recv " << loc << " from " << sr_info.peer;
-        char* buf = NULL;
-        int buf_size = 0;
-        MPI_Recv(&buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
-                 sr_info.comm, MPI_STATUS_IGNORE);
-//      std::cout << " recv buffer size = " << buf_size << std::endl;
-        buf = (char*)malloc(sizeof(char) * buf_size);
-        MPI_Recv((void*)buf, buf_size, MPI_CHAR, sr_info.peer, sr_info.tag,
-                 sr_info.comm, MPI_STATUS_IGNORE);
-        GenericDerivative<locint> recv_gd(buf, buf_size);
-//      recv_gd.debug();      
+        total_buf_size += global_gd[loc].byte_size();
+      }
+      char* buf = (char*)malloc(sizeof(char) * total_buf_size);
+      total_buf_size = 0;
+      for(int i = 0; i < sr_info.count; i++) {
+        loc = sr_info.loc + i;
+        total_buf_size += global_gd[loc].to_byte(&(buf[total_buf_size]));
+        global_gd.erase(loc);
+      }
+      MPI_Send(&total_buf_size, 1, MPI_INT, sr_info.peer,
+               sr_info.tag, sr_info.comm);
+      MPI_Send((void*)buf, total_buf_size, MPI_CHAR, sr_info.peer,
+               sr_info.tag, sr_info.comm);
+//      std::cout << myid << " send size " << total_buf_size << std::endl;
+      free(buf);
+    } else {
+      int total_buf_size = 0;
+      int buf_size;
+      MPI_Recv(&total_buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
+               sr_info.comm, MPI_STATUS_IGNORE);
+//      std::cout << myid << " recv size " << total_buf_size << std::endl;
+      char* buf = (char*)malloc(sizeof(char) * total_buf_size);
+      MPI_Recv((void*)buf, total_buf_size, MPI_CHAR, sr_info.peer,
+               sr_info.tag, sr_info.comm, MPI_STATUS_IGNORE);
+      total_buf_size = 0;
+      for(int i = 0; i < sr_info.count; i++) {
+        loc = sr_info.loc + i;
+        GenericDerivative<locint> recv_gd(&(buf[total_buf_size]), buf_size);
+        total_buf_size += buf_size;
+//        recv_gd.debug();      
         generic_mpi_process_recv_gd(order, loc,
                                     live_set, recv_gd, global_gd);
-        free(buf);
       }
+      free(buf);
     }
   }
 }

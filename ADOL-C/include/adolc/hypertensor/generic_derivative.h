@@ -11,13 +11,13 @@ class GenericDerivative {
  public:
   GenericDerivative(): d(0) {};
   GenericDerivative(int order): d(order) {info.resize(d);};
-  GenericDerivative(char* const byte, const int mpi_recv_size);
+  GenericDerivative(char* const byte, int& mpi_recv_size);
   void clear();
   void increase(const OpenCombMultiSet<T>& set, double v);
   double get(const OpenCombMultiSet<T>& set);
   void debug() const;
   void find_and_erase(T target, GenericDerivative& gd);
-  char* to_byte();
+  int to_byte(char* buf);
   int byte_size();
   class iterator {
    public:
@@ -179,27 +179,15 @@ void GenericDerivative<T>::find_and_erase(T target,
 }
 
 template <typename T>
-char* GenericDerivative<T>::to_byte() {
-  mpi_byte_size = 0;
-  // order
-  mpi_byte_size += sizeof(int);
+int GenericDerivative<T>::to_byte(char* buf) {
+  byte_size();
   typename std::vector<std::map<OpenCombMultiSet<T>, double> >::iterator v_iter;
   typename std::map<OpenCombMultiSet<T>, double>::iterator m_iter;
-  v_iter = info.begin();
-  while(v_iter != info.end()) {
-    m_iter = (*v_iter).begin();
-    while(m_iter != (*v_iter).end()) {
-      mpi_byte_size += sizeof(int);
-      mpi_byte_size += m_iter->first.size() * sizeof(T);
-      mpi_byte_size += sizeof(double);
-      ++m_iter;
-    }
-    ++v_iter;
-  }
-  char* ret = (char*)malloc(mpi_byte_size);
-  char* p = ret;
+  char* p = buf;
+  *(int*)p = mpi_byte_size;
+  p += sizeof(int);
   *(int*)p = d;
-  p+=sizeof(int);
+  p += sizeof(int);
   v_iter = info.begin();
   while(v_iter != info.end()) {
     m_iter = (*v_iter).begin();
@@ -214,25 +202,43 @@ char* GenericDerivative<T>::to_byte() {
     }
     ++v_iter;
   }
-  return ret;
+  return mpi_byte_size;
 }
 
 template <typename T>
 int GenericDerivative<T>::byte_size() { 
+  mpi_byte_size = 0;
+  // order
+  mpi_byte_size += 2 * sizeof(int);
+  typename std::vector<std::map<OpenCombMultiSet<T>, double> >::iterator v_iter;
+  typename std::map<OpenCombMultiSet<T>, double>::iterator m_iter;
+  v_iter = info.begin();
+  while(v_iter != info.end()) {
+    m_iter = (*v_iter).begin();
+    while(m_iter != (*v_iter).end()) {
+      mpi_byte_size += sizeof(int);
+      mpi_byte_size += m_iter->first.size() * sizeof(T);
+      mpi_byte_size += sizeof(double);
+      ++m_iter;
+    }
+    ++v_iter;
+  }
   return mpi_byte_size;
 }
 
 template <typename T>
 GenericDerivative<T>::GenericDerivative(char* const byte,
-                                        const int mpi_recv_size) {
+                                        int& mpi_recv_size) {
   char* p = byte;
+  mpi_recv_size = *((int*)p);
+  p += sizeof(int);
   int k = 0;
   double w;
   d = *((int*)p);
   info.clear();
   info.resize(d);
   p += sizeof(int);
-  mpi_byte_size = sizeof(int);
+  mpi_byte_size = 2 * sizeof(int);
   while(mpi_byte_size < mpi_recv_size) {
     k = *((int*)p);
     p += sizeof(int);

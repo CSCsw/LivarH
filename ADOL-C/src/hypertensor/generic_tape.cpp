@@ -277,7 +277,7 @@ int generic_tape(short tag,
         arg1 = get_locint_f();
         arg2 = get_locint_f();
         res = get_locint_f();
-        std::cout << res << " <--- " << arg1 << " * " << arg2 << std::endl;
+//        std::cout << res << " <--- " << arg1 << " * " << arg2 << std::endl;
         hyper_index.push_back(TRANSLATE_ARG(arg1));
         hyper_value.push_back(dp_T0[arg1]);
         hyper_index.push_back(TRANSLATE_ARG(arg2));
@@ -290,7 +290,7 @@ int generic_tape(short tag,
         arg = get_locint_f();
         res = get_locint_f();
         coval = get_val_f();
-        std::cout << res << " <--- " << arg << " * " << coval << std::endl;
+//        std::cout << res << " <--- " << arg << " * " << coval << std::endl;
         hyper_index.push_back(NULLLOC);
         hyper_value.push_back(coval);
         hyper_index.push_back(TRANSLATE_ARG(arg));
@@ -428,7 +428,7 @@ int generic_tape(short tag,
         arg1 = get_locint_f();
         arg2 = get_locint_f();
         res = get_locint_f();
-        std::cout << res << " = cos " << arg1 << std::endl;
+//        std::cout << res << " = cos " << arg1 << std::endl;
         hyper_index.push_back(TRANSLATE_ARG(arg1));
         hyper_value.push_back(dp_T0[arg1]);
         dp_T0[res] = cos(dp_T0[arg1]);
