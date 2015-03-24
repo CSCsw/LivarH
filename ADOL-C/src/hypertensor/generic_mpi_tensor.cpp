@@ -40,6 +40,7 @@ int generic_mpi_tensor(short tag,
   std::map<locint, GenericDerivative<locint> >::iterator iter;
   iter = generic_derivative.begin();
 
+/*
 //  if (myid == DEBUG_ID) {
     while(iter != generic_derivative.end() ){
       std::cout << "Derivative For : " << iter->first << std::endl;
@@ -47,10 +48,10 @@ int generic_mpi_tensor(short tag,
       iter++;
     }
 //  }
-
+*/
   generic_mpi_forward(d, live_set, generic_derivative);
 
-
+/*
   iter = generic_derivative.begin();
   if (myid == 0) {
     while(iter != generic_derivative.end() ){
@@ -59,5 +60,5 @@ int generic_mpi_tensor(short tag,
       iter++;
     }
   }
-
+*/
 }

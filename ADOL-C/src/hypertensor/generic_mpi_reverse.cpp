@@ -777,7 +777,7 @@ void generic_mpi_process_recv_gd(
 // For linear derivatives, we have a more efficient method
 //    std::cout << " res = " << res << " is linear : ";
 //    recv_gd.debug();
-    std::cout << std::endl;
+//    std::cout << std::endl;
     dep_iter = live_set.begin();
     while(dep_iter != live_set.end() ) {
       dummy_dep = dep_iter->first;
@@ -832,14 +832,14 @@ void generic_mpi_forward(int order,
                sr_info.tag, sr_info.comm);
       MPI_Send((void*)buf, total_buf_size, MPI_CHAR, sr_info.peer,
                sr_info.tag, sr_info.comm);
-      std::cout << myid << " send size " << total_buf_size << std::endl;
+//      std::cout << myid << " send size " << total_buf_size << std::endl;
       free(buf);
     } else {
       int total_buf_size = 0;
       int buf_size;
       MPI_Recv(&total_buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
                sr_info.comm, MPI_STATUS_IGNORE);
-      std::cout << myid << " recv size " << total_buf_size << std::endl;
+//      std::cout << myid << " recv size " << total_buf_size << std::endl;
       char* buf = (char*)malloc(sizeof(char) * total_buf_size);
       MPI_Recv((void*)buf, total_buf_size, MPI_CHAR, sr_info.peer,
                sr_info.tag, sr_info.comm, MPI_STATUS_IGNORE);
@@ -848,7 +848,7 @@ void generic_mpi_forward(int order,
         loc = sr_info.loc + i;
         GenericDerivative<locint> recv_gd(&(buf[total_buf_size]), buf_size);
         total_buf_size += buf_size;
-        recv_gd.debug();      
+//        recv_gd.debug();      
         generic_mpi_process_recv_gd(order, loc,
                                     live_set, recv_gd, global_gd);
       }

@@ -15,7 +15,7 @@ static int dummy_reverse_size = 0;
 
 
 static adouble* get_dummy(int count) {
-  std::cout << "In get dummy, count = " << count << std::endl;
+//  std::cout << "In get dummy, count = " << count << std::endl;
   if (count + dummy_reverse_size >= MAX_DUMMY_SIZE) {
     std::cout << "Not enough dummy adoubles reversed! "
               << "Current size = " << MAX_DUMMY_SIZE << std::endl;
@@ -60,7 +60,7 @@ int RMPI_Send(void* buf,
               int tag,
               MPI_Comm comm) {
   int rc;
-  std::cout << "In RMPI_Send:" << std::endl;
+//  std::cout << "In RMPI_Send:" << std::endl;
   if (datatype == RMPI_ADOUBLE) {
     void* send_buf;
 //    std::cout << "Active type" << std::endl;
@@ -96,13 +96,10 @@ int RMPI_Recv(void* buf,
               MPI_Comm comm,
               MPI_Status* status) {
   int rc;
-  std::cout << "In Recv:" << std::endl;
+//  std::cout << "In Recv:" << std::endl;
   if (datatype == RMPI_ADOUBLE) {
     adouble* adouble_p = (adouble*)buf;
     adouble* dummy_ind = get_dummy(count);
-    if (count == 1) {
-      std::cout << "dummy_ind.loc = " << dummy_ind->loc() << std::endl;
-    }
     void* recv_buf;
     recv_buf = ADOLC_rawData_p(buf, count);
 // 1 Do the recv
