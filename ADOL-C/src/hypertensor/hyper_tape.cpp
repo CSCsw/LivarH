@@ -100,12 +100,12 @@ int hyper_tape(short tag,
         arg = get_locint_f();
         res = get_locint_f();
         dp_T0[res] = dp_T0[arg];
-        std::cout << res << " <--- " << arg << std::endl;
+//        std::cout << res << " <--- " << arg << std::endl;
         hyper_index.push_back(TRANSLATE_ARG(arg));
         hyper_index.push_back(TRANSLATE_RES(res));
         hyper_value.push_back(dp_T0[arg]);
         hyper_value.push_back(dp_T0[res]);
-        std::cout << index_translate[res] << " <--- " << index_translate[arg] << std::endl;
+//        std::cout << index_translate[res] << " <--- " << index_translate[arg] << std::endl;
         break;
       case assign_d:
         res = get_locint_f();
@@ -131,13 +131,13 @@ int hyper_tape(short tag,
         dp_T0[res] = basepoint[index_ind++];
         hyper_index.push_back(TRANSLATE_IND(res));
         hyper_value.push_back(dp_T0[res]);
-        std::cout << res << " I--> " << index_translate[res] << " = " << dp_T0[res] << std::endl;
+//        std::cout << res << " I--> " << index_translate[res] << " = " << dp_T0[res] << std::endl;
         break;
       case assign_dep:
         res = get_locint_f();
         hyper_index.push_back(TRANSLATE_DEP(res));
         hyper_value.push_back(dp_T0[res]);
-        std::cout << res << " D--> " << hyper_index.back() << std::endl;
+//        std::cout << res << " D--> " << hyper_index.back() << std::endl;
         break;
       case eq_plus_d:
         res = get_locint_f();
@@ -195,9 +195,7 @@ int hyper_tape(short tag,
         break;
       case incr_a:
         res = get_locint_f();
-        std::cout << "D[" << res << "]" << dp_T0[res] << std::endl;
         dp_T0[res]++;
-        std::cout << "D[" << res << "]" << dp_T0[res] << std::endl;
         break;
       case decr_a:
         res = get_locint_f();
@@ -214,9 +212,6 @@ int hyper_tape(short tag,
         dp_T0[res] = dp_T0[arg1] + dp_T0[arg2];
         hyper_index.push_back(TRANSLATE_RES(res));
         hyper_value.push_back(dp_T0[res]);
-        std::cout << arg1 << " ---> " << index_translate[arg1] << std::endl;
-        std::cout << arg2 << " ---> " << index_translate[arg2] << std::endl;
-        std::cout << res << " ---> " << index_translate[res] << std::endl;
         break;
       case plus_d_a:
         arg = get_locint_f();
@@ -254,8 +249,8 @@ int hyper_tape(short tag,
         arg1 = get_locint_f();
         arg2 = get_locint_f();
         res = get_locint_f();
-        std::cout << res << " <--- " << arg1 << " * " << arg2 << std::endl;
-        std::cout << "values = " << dp_T0[arg1] << " * " << dp_T0[arg2] << std::endl;
+//        std::cout << res << " <--- " << arg1 << " * " << arg2 << std::endl;
+//        std::cout << "values = " << dp_T0[arg1] << " * " << dp_T0[arg2] << std::endl;
         hyper_index.push_back(TRANSLATE_ARG(arg1));
         hyper_value.push_back(dp_T0[arg1]);
         hyper_index.push_back(TRANSLATE_ARG(arg2));
@@ -263,13 +258,12 @@ int hyper_tape(short tag,
         dp_T0[res] = dp_T0[arg1] * dp_T0[arg2];
         hyper_index.push_back(TRANSLATE_RES(res));
         hyper_value.push_back(dp_T0[res]);
-        std::cout << hyper_index.size() << "  =  "  << hyper_value.size() << std::endl;
+//        std::cout << hyper_index.size() << "  =  "  << hyper_value.size() << std::endl;
         break;
       case mult_d_a:
         arg = get_locint_f();
         res = get_locint_f();
         coval = get_val_f();
-        std::cout << res << " <--- " << arg << " * " << coval << std::endl;
         hyper_index.push_back(NULLLOC);
         hyper_value.push_back(coval);
         hyper_index.push_back(TRANSLATE_ARG(arg));
@@ -407,7 +401,6 @@ int hyper_tape(short tag,
         arg1 = get_locint_f();
         arg2 = get_locint_f();
         res = get_locint_f();
-        std::cout << res << " = cos " << arg1 << std::endl;
         hyper_index.push_back(TRANSLATE_ARG(arg1));
         hyper_value.push_back(dp_T0[arg1]);
         dp_T0[res] = cos(dp_T0[arg1]);

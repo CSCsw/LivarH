@@ -20,6 +20,7 @@
 #define POP_LAST_VALUE(n) for(int i = 0; i < n; ++i) {hyper_value.pop_back();}
 
 #define DEBUG_ID 0
+
 extern std::vector<SRinfo> sr_stack;
 
 void generic_mpi_process_sac(int order,

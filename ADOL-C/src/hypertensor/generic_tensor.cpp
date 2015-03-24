@@ -34,5 +34,5 @@ int generic_tensor(short tag,
 */
   special_derivative_table();
   generic_reverse(tag, d, hyper_index, hyper_value, generic_derivative);
-  generic_derivative.debug();
+//  generic_derivative.debug();
 }
