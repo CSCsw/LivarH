@@ -8,17 +8,38 @@ MPI_Datatype RMPI_ADOUBLE;
 
 std::vector<double> dummy_ind_vec;
 
+#define MAX_DUMMY_SIZE 100000
+
+static adouble* dummy_reverse;
+static int dummy_reverse_size = 0;
+
+
+static adouble* get_dummy(int count) {
+  std::cout << "In get dummy, count = " << count << std::endl;
+  if (count + dummy_reverse_size >= MAX_DUMMY_SIZE) {
+    std::cout << "Not enough dummy adoubles reversed! "
+              << "Current size = " << MAX_DUMMY_SIZE << std::endl;
+    exit(-1);
+  }
+  adouble* ret = &(dummy_reverse[dummy_reverse_size]);
+  dummy_reverse_size += count;
+  return ret;
+}
+
 void RMPI_Init(int* argc, char** argv[]) {
   MPI_Init(argc, argv);
   MPI_Type_contiguous(1, MPI_DOUBLE, &RMPI_ADOUBLE);
   MPI_Type_commit(&RMPI_ADOUBLE);
   RMPI_trace_init();  
   dummy_ind_vec.clear();
+  dummy_reverse = new adouble[MAX_DUMMY_SIZE];
+  dummy_reverse_size = 0;
 }
 
 void RMPI_Finalize() {
   if (RMPI_ADOUBLE != MPI_DATATYPE_NULL) {MPI_Type_free(&RMPI_ADOUBLE);}
   MPI_Finalize();
+  delete[] dummy_reverse;
 }
 
 // For the current implementation, we only send 1 variable!
@@ -39,14 +60,14 @@ int RMPI_Send(void* buf,
               int tag,
               MPI_Comm comm) {
   int rc;
-//  std::cout << "In RMPI_Send:" << std::endl;
+  std::cout << "In RMPI_Send:" << std::endl;
   if (datatype == RMPI_ADOUBLE) {
     void* send_buf;
 //    std::cout << "Active type" << std::endl;
 // 1 Generate a dummy dependent variable
     double dummy_dep_v;
     adouble* adouble_p = (adouble*)buf;
-    adouble* dummy_dep = new adouble[count];
+    adouble* dummy_dep = get_dummy(count);
     for(int i = 0; i < count; i++) {
       dummy_dep[i] = adouble_p[i];
       dummy_dep[i] >>= dummy_dep_v;
@@ -75,11 +96,13 @@ int RMPI_Recv(void* buf,
               MPI_Comm comm,
               MPI_Status* status) {
   int rc;
-
-
+  std::cout << "In Recv:" << std::endl;
   if (datatype == RMPI_ADOUBLE) {
     adouble* adouble_p = (adouble*)buf;
-    adouble* dummy_ind = new adouble[count];
+    adouble* dummy_ind = get_dummy(count);
+    if (count == 1) {
+      std::cout << "dummy_ind.loc = " << dummy_ind->loc() << std::endl;
+    }
     void* recv_buf;
     recv_buf = ADOLC_rawData_p(buf, count);
 // 1 Do the recv

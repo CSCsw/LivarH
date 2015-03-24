@@ -255,6 +255,7 @@ int hyper_tape(short tag,
         arg2 = get_locint_f();
         res = get_locint_f();
         std::cout << res << " <--- " << arg1 << " * " << arg2 << std::endl;
+        std::cout << "values = " << dp_T0[arg1] << " * " << dp_T0[arg2] << std::endl;
         hyper_index.push_back(TRANSLATE_ARG(arg1));
         hyper_value.push_back(dp_T0[arg1]);
         hyper_index.push_back(TRANSLATE_ARG(arg2));
@@ -262,6 +263,7 @@ int hyper_tape(short tag,
         dp_T0[res] = dp_T0[arg1] * dp_T0[arg2];
         hyper_index.push_back(TRANSLATE_RES(res));
         hyper_value.push_back(dp_T0[res]);
+        std::cout << hyper_index.size() << "  =  "  << hyper_value.size() << std::endl;
         break;
       case mult_d_a:
         arg = get_locint_f();

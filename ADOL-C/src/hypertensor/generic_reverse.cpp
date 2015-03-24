@@ -12,7 +12,6 @@
 #include <adolc/hypertensor/generic_reverse.h>
 #include <adolc/hypertensor/opencomb.h>
 #include <sys/time.h>
-#include "mpi.h"
 
 #define DEBUG_ID 99
 
@@ -160,6 +159,7 @@ int generic_reverse(short tag,
         info.r = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
+        POP_LAST_VALUE(3);
         populate_derivative_table(order, info, local_gd);
         break;
       case min_d_a:
@@ -169,6 +169,7 @@ int generic_reverse(short tag,
         populate_derivative_table(order, info, local_gd);
         break;
       case mult_a_a:
+//        std::cout << hyper_index.size() << "=" << hyper_value.size()<<std::endl;
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
@@ -617,9 +618,10 @@ void generic_d_tuples(int order,
                       GenericDerivative<locint>& global_gd,
                       GenericDerivative<locint>& local_gd,
                       GenericDerivative<locint>& temp_gd) {
-  int myid;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-if (myid == DEBUG_ID) {
+/*
+//  int myid;
+//  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+//if (myid == DEBUG_ID) {
   std::cout << "global: " << std::endl;
   global_gd.debug();
   std::cout << std::endl;
@@ -631,8 +633,8 @@ if (myid == DEBUG_ID) {
   std::cout << "temp: " << std::endl;
   temp_gd.debug();
   std::cout << std::endl;
-}
-
+//}
+*/
   typename GenericDerivative<locint>::iterator local_iter;
   local_iter = local_gd.get_new_iterator();
   local_iter.init_iterator();
@@ -720,9 +722,11 @@ if (myid == DEBUG_ID) {
     }
     live_set.insert(info.x);
   }
-if (myid == DEBUG_ID) {
+/*
+//if (myid == DEBUG_ID) {
   std::cout << "new global:" << std::endl;
   global_gd.debug();
   std::cout << std::endl; 
-}
+//}
+*/
 }

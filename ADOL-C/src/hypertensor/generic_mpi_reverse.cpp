@@ -170,6 +170,7 @@ int generic_mpi_reverse(short tag,
         info.r = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
+        POP_LAST_VALUE(3);
         populate_derivative_table(order, info, local_gd);
         break;
       case min_d_a:
@@ -440,15 +441,6 @@ int generic_mpi_reverse(short tag,
               std::cout << "Generic MPI reverse Recv opcode error!" << std::endl;
             }
           }
-          for(int i = 0; i < sr_riter->count; i++) {
-            opcode = get_op_r();
-            if (opcode == assign_d_zero) {
-              GET_LAST_INDEX;
-              GET_LAST_VALUE;
-            } else {
-              std::cout << "Generic MPI reverse Recv opcode error!" << std::endl;
-            }
-          }
         } else {
           std::cout << "Generic MPI reverse trace RecvERROR!" << std::endl;
         }
@@ -502,6 +494,14 @@ void generic_mpi_process_sac(int order,
       global_gd[dummy_dep].find_and_erase(info.r, temp_gd);
       generic_d_tuples(order, info, live_set[dummy_dep],
                        global_gd[dummy_dep], local_gd, temp_gd);
+/*
+      std::cout << "dummy_dep = " << dummy_dep << std::endl;
+      std::cout << "local_gd:" << std::endl;
+      local_gd.debug();
+      std::cout << "global gd:"  << std::endl;
+      global_gd[dummy_dep].debug();
+      std::cout << std::endl;
+*/
     }
     dep_iter++;
   }
@@ -793,9 +793,6 @@ void generic_mpi_process_recv_gd(
     return;
   }
 
-
-
-
   dep_iter = live_set.begin();
   while(dep_iter != live_set.end() ) {
     dummy_dep = dep_iter->first;
@@ -835,14 +832,14 @@ void generic_mpi_forward(int order,
                sr_info.tag, sr_info.comm);
       MPI_Send((void*)buf, total_buf_size, MPI_CHAR, sr_info.peer,
                sr_info.tag, sr_info.comm);
-//      std::cout << myid << " send size " << total_buf_size << std::endl;
+      std::cout << myid << " send size " << total_buf_size << std::endl;
       free(buf);
     } else {
       int total_buf_size = 0;
       int buf_size;
       MPI_Recv(&total_buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
                sr_info.comm, MPI_STATUS_IGNORE);
-//      std::cout << myid << " recv size " << total_buf_size << std::endl;
+      std::cout << myid << " recv size " << total_buf_size << std::endl;
       char* buf = (char*)malloc(sizeof(char) * total_buf_size);
       MPI_Recv((void*)buf, total_buf_size, MPI_CHAR, sr_info.peer,
                sr_info.tag, sr_info.comm, MPI_STATUS_IGNORE);
@@ -851,7 +848,7 @@ void generic_mpi_forward(int order,
         loc = sr_info.loc + i;
         GenericDerivative<locint> recv_gd(&(buf[total_buf_size]), buf_size);
         total_buf_size += buf_size;
-//        recv_gd.debug();      
+        recv_gd.debug();      
         generic_mpi_process_recv_gd(order, loc,
                                     live_set, recv_gd, global_gd);
       }
