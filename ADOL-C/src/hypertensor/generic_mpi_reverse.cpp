@@ -216,7 +216,6 @@ int generic_mpi_reverse(short tag,
         populate_derivative_table(order, info, local_gd);
         break;
       case eq_plus_prod:
-/*
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
@@ -224,6 +223,8 @@ int generic_mpi_reverse(short tag,
         {
           info.opcode = plus_a_a;
           populate_derivative_table(order, info, local_gd);
+          generic_mpi_process_sac(order, info, live_set,
+                                  local_gd, temp_gd, global_gd);
         }
         local_gd.clear();
         info.opcode = mult_a_a;
@@ -233,10 +234,9 @@ int generic_mpi_reverse(short tag,
         info.dx = GET_LAST_VALUE;
         info.dy = GET_LAST_VALUE;
         populate_derivative_table(order, info, local_gd);
-*/
         break;
       case eq_min_prod:
-/*
+
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
@@ -244,10 +244,8 @@ int generic_mpi_reverse(short tag,
         {
           info.opcode = min_a_a;
           populate_derivative_table(order, info, local_gd);
-          live_set.erase(info.r);
-          global_gd.find_and_erase(info.r, temp_gd);
-          generic_d_tuples(order, info, live_set,
-                           global_gd, local_gd, temp_gd);
+          generic_mpi_process_sac(order, info, live_set,
+                                  local_gd, temp_gd, global_gd);
         }
         local_gd.clear();
         info.opcode = mult_a_a;
@@ -257,7 +255,6 @@ int generic_mpi_reverse(short tag,
         info.dx = GET_LAST_VALUE;
         info.dy = GET_LAST_VALUE;
         populate_derivative_table(order, info, local_gd);
-*/
         break;
       case pos_sign_a:
         info.r = GET_LAST_INDEX;
