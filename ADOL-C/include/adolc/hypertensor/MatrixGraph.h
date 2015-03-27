@@ -9,9 +9,10 @@ class MatrixGraph {
   virtual void increase(T x, T y, double v) = 0;
   virtual VectorGraph<T>* get_and_erase(T x) = 0;
   virtual VectorGraph<T>* get(T x) = 0;
-  virtual int get_size() = 0;
-  virtual void debug() = 0;
-
+  virtual int get_size() const = 0;
+  virtual void debug() const = 0;
+  virtual int get_byte_size() const = 0;
+  virtual void write_to_byte(char* buf) const = 0;
   class iterator {
    public:
     virtual ~iterator() {};

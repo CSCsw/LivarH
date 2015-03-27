@@ -9,8 +9,8 @@
 #include <adolc/hypertensor/MatrixGraph.h>
 #include <adolc/hypertensor/HyperGraph.h>
 #include <adolc/hypertensor/hyper_common.h>
-#include <adolc/hypertensor/hyper_third_reverse.h>
-#include <adolc/hypertensor/hyper_reverse.h>
+#include <adolc/hypertensor/hyper_pushing.h>
+#include <adolc/hypertensor/hyper_derivative.h>
 
 #define GET_LAST_INDEX hyper_index.back(); hyper_index.pop_back();
 #define GET_LAST_VALUE hyper_value.back(); hyper_value.pop_back();
@@ -28,12 +28,10 @@
 #define PSEUDO_BINARY_2 if (info.y == info.x) {info.y = NULLLOC; COMBINE_D_2;}
 #define PSEUDO_BINARY_3 if (info.y == info.x) {info.y = NULLLOC; COMBINE_D_3;}
 
-int hyper_third_reverse(short tag,
+int hyper_mpi_reverse(short tag,
                         std::vector<locint>& hyper_index,
                         std::vector<double>& hyper_value,
-                        VectorGraph<locint>* adjoints,
-                        MatrixGraph<locint>* hessian,
-                        HyperGraph<locint>* tensor) {
+                        std::map<locint, HyperDerivative<locint> >& global_gd) {
   ADOLC_OPENMP_THREAD_NUMBER;
   ADOLC_OPENMP_GET_THREAD_NUMBER;
   std::cout << "In hyper_third_reverse " << std::endl;
@@ -91,8 +89,9 @@ int hyper_third_reverse(short tag,
         break;
       case assign_dep:
         res = GET_LAST_INDEX;
-        adjoints->increase(res, 1.0);
         GET_LAST_VALUE;
+        global_gd[res].init();
+        global_gd[res].adjoints->increase(res, 1.0);
         std::cout << "Dep: " << res << std::endl;
         break;
       case eq_plus_d:
@@ -212,6 +211,7 @@ int hyper_third_reverse(short tag,
         PSEUDO_BINARY_3;
         break;
       case eq_plus_prod:
+/*
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
@@ -237,8 +237,10 @@ int hyper_third_reverse(short tag,
         info.dx = GET_LAST_VALUE;
         info.pxy = 1.0;
         PSEUDO_BINARY_2;
+*/
         break;
       case eq_min_prod:
+/*
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
@@ -264,6 +266,7 @@ int hyper_third_reverse(short tag,
         info.dx = GET_LAST_VALUE;
         info.pxy = 1.0;
         PSEUDO_BINARY_2;
+*/
         break;
       case pos_sign_a:
         info.r = GET_LAST_INDEX;
@@ -488,7 +491,6 @@ int hyper_third_reverse(short tag,
         // TODO: third order
         break;
 #endif // ATRIG_ERF
-
       default:
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
@@ -500,17 +502,15 @@ int hyper_third_reverse(short tag,
               << info.pxx << "," << info.pxy << "," << info.pyy << std::endl;
 */
     if (info.r != NULLLOC) {
-      double w = adjoints->get_and_erase(info.r);
-      VectorGraph<locint>* r = hessian->get_and_erase(info.r);
-      MatrixGraph<locint>* e = tensor->get_and_erase(info.r);
-      // TODO: third order
-      hyper_third(info, adjoints, hessian, tensor, w, r, e);
-      // Hessian
-      hyper_hessian(info, adjoints, hessian, w, r);
-      // Adjoints
-      hyper_adjoints(info, adjoints, w);
-      delete r;
-      delete e;
+      typename std::map<locint, HyperDerivative<locint> >::iterator iter;
+      iter = global_gd.begin();
+      locint dep;
+      while(iter != global_gd.end()) {
+        dep = iter->first;
+        if (global_gd[dep].adjoints->has_live(info.r)) {
+          hyper_process_sac(info, global_gd[dep]);
+        }
+      }
     }
     opcode = get_op_r(); 
   }

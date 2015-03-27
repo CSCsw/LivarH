@@ -16,8 +16,9 @@ libhypertensorinclude_HEADERS = VectorGraph.h VectorGraphMap.h \
                                 MatrixGraph.h MatrixGraphMap.h \
                                 HyperGraph.h HyperGraphMap.h \
                                 hyper_tensor.h hyper_tape.h \
-                                hyper_third_reverse.h hyper_common.h \
-                                hyper_reverse.h \
+                                hyper_reverse.h hyper_common.h \
+                                hyper_pushing.h \
+                                hyper_mpi_reverse.h hyper_mpi_tensor.h\
                                 opencomb.h \
                                 opencomb_multi_set.h\
                                 opencomb_multi_subset.h\

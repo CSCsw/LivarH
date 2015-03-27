@@ -8,7 +8,7 @@
 #include <adolc/hypertensor/HyperGraph.h>
 #include <adolc/hypertensor/HyperGraphMap.h>
 #include <adolc/hypertensor/hyper_tape.h>
-#include <adolc/hypertensor/hyper_third_reverse.h>
+#include <adolc/hypertensor/hyper_reverse.h>
 
 
 // options[0] = 1, first order;
@@ -36,7 +36,7 @@ int hyper_tensor(short tag,
 //  for(const locint& x: hyper_index) {
 //    std::cout << x << std::endl;
 //  }
-  hyper_third_reverse(tag, hyper_index, hyper_value, adjoints, hessian, tensor);
+  hyper_reverse(tag, hyper_index, hyper_value, adjoints, hessian, tensor);
 
 // result check
   bool has_next;
