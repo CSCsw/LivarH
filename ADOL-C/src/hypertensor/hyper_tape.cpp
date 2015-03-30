@@ -11,14 +11,26 @@
 #include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/hyper_tape.h>
 
-#define TRANSLATE_ARG(arg) (index_translate[arg])
-#define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
-
-#define TRANSLATE_IND(ind) TRANSLATE_RES(ind)
-#define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
-
 #define TEMP_INDEX (NULLLOC - 1)
 
+#ifdef ENABLE_HYPER_MPI
+#include "mpi.h"
+#include <adolc/hypertensor/generic_mpi_trace.h>
+// No index translate when enabling mpi
+#define TRANSLATE_ARG(arg) arg + index_b
+#define TRANSLATE_RES(res) res + index_b
+#define TRANSLATE_IND(ind) ind + index_b
+#define TRANSLATE_DEP(dep) dep + index_b
+
+extern std::vector<SRinfo> sr_stack;
+extern std::vector<double> dummy_ind_vec;
+
+#else // ENABLE_HYPER_MPI
+
+#define TRANSLATE_ARG(arg) (index_translate[arg])
+#define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
+#define TRANSLATE_IND(ind) TRANSLATE_RES(ind)
+#define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
 locint translate_result(std::map<locint, locint>& index_translate,
                                locint& max_ind,
                                locint res) {
@@ -27,6 +39,7 @@ locint translate_result(std::map<locint, locint>& index_translate,
   index_translate[res] = ret;
   return ret;
 }
+#endif // ENABLE_HYPER_MPI
 
 int hyper_tape(short tag,
                int depcheck,
@@ -35,6 +48,13 @@ int hyper_tape(short tag,
                std::map<locint, locint>& ind_map,
                std::vector<locint>& hyper_index,
                std::vector<double>& hyper_value) {
+#ifdef ENABLE_HYPER_MPI
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  locint index_b = myid * INDEX_PER_PROC;
+  std::vector<SRinfo>::iterator sr_iter;
+  sr_iter = sr_stack.begin();
+#endif
   std::cout << "In hyper_tape" << std::endl;
   unsigned char opcode;
   locint size = 0;
@@ -69,6 +89,7 @@ int hyper_tape(short tag,
   dp_T0 = new double[ADOLC_CURRENT_TAPE_INFOS.stats[NUM_MAX_LIVES]];
   opcode = get_op_f();
   while(opcode != end_of_tape) {
+//std::cout << "opcode = " << (int)opcode << std::endl;
     switch (opcode) {
       // CONTROL OPCODES
       case end_of_op:
@@ -128,7 +149,14 @@ int hyper_tape(short tag,
         break;
       case assign_ind:
         res = get_locint_f();
-        dp_T0[res] = basepoint[index_ind++];
+        if (index_ind < indcheck) {
+          dp_T0[res] = basepoint[index_ind];
+        } else if (index_ind < indcheck + dummy_ind_vec.size()) {
+          dp_T0[res] = dummy_ind_vec[index_ind - indcheck];
+        } else {
+          std::cout << "FATAL error in dummy independent!" << std::endl;
+        }
+        index_ind++;
         hyper_index.push_back(TRANSLATE_IND(res));
         hyper_value.push_back(dp_T0[res]);
 //        std::cout << res << " I--> " << index_translate[res] << " = " << dp_T0[res] << std::endl;
@@ -604,10 +632,31 @@ int hyper_tape(short tag,
         get_locint_f();
       case ignore_me:
         break;
+#ifdef ENABLE_HYPER_MPI
+      case ampi_send:
+        if (sr_iter->SR_tag == RMPI_SEND_TAG) {
+          res = sr_iter->loc;
+          sr_iter->loc = TRANSLATE_ARG(res);
+        } else {
+          std::cout << "HYPER MPI: Send trace error." << std::endl;
+        }
+        sr_iter++;
+        break;
+      case ampi_recv:
+        if (sr_iter->SR_tag == RMPI_RECV_TAG) {
+          res = sr_iter->loc;
+          sr_iter->loc = TRANSLATE_ARG(res);
+        } else {
+          std::cout << "HYPER MPI: Recv trace error." << std::endl;
+        }
+        sr_iter++;
+        break;
+#endif // ENABLE_HYPER_MPI
       default:
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
     opcode = get_op_f();
   }
   end_sweep();
+  std::cout << "Out hyper_tape" << std::endl;
 }

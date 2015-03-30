@@ -11,4 +11,6 @@ int hyper_mpi_reverse(short tag,
                   std::map<locint, HyperDerivative<locint> >& global_gd);
 
 
+void hyper_mpi_forward(std::map<locint, HyperDerivative<locint> >& global_gd);
+
 #endif // HYPER_MPI_REVERSE_H_

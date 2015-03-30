@@ -10,6 +10,9 @@
 
 #define MAX_ORDER 5
 
+#define ENABLE_HYPER_MPI 1
+#define INDEX_PER_PROC 10000000
+
 template <typename T>
 void T_SWAP(T&a, T& b) {
   T c = std::move(a);

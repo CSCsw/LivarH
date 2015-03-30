@@ -1,5 +1,6 @@
 #ifndef HYPER_PUSHING_H_
 #define HYPER_PUSHING_H_
+#include <map>
 #include <adolc/adolc.h>
 #include "VectorGraph.h"
 #include "MatrixGraph.h"
@@ -27,4 +28,9 @@ void hyper_adjoints(DerivativeInfo<locint>& info,
 
 void hyper_process_sac(DerivativeInfo<locint>& info,
                       HyperDerivative<locint>& global_gd);
+
+void hyper_process_recv_gd(locint dep,
+                           HyperDerivative<locint>& local_gd,
+                           std::map<locint, HyperDerivative<locint> >& global_gd);
+
 #endif // HYPER_PUSHING_H_

@@ -9,9 +9,10 @@ class VectorGraph {
     virtual ~iterator() {};
     virtual bool reset() = 0;
     virtual bool get_next(T& x, double& w) = 0;
+    virtual typename VectorGraph<T>::iterator* copy_iter() = 0;
   };
   virtual bool has_live(T target) const = 0;
-  virtual int get_byte_size() const = 0;
+  virtual int byte_size() const = 0;
   virtual void write_to_byte(char* buf) const = 0;
   virtual void increase(T x, double v) = 0;
   virtual double get_and_erase(T x) = 0;

@@ -11,7 +11,7 @@ class MatrixGraph {
   virtual VectorGraph<T>* get(T x) = 0;
   virtual int get_size() const = 0;
   virtual void debug() const = 0;
-  virtual int get_byte_size() const = 0;
+  virtual int byte_size() const = 0;
   virtual void write_to_byte(char* buf) const = 0;
   class iterator {
    public:

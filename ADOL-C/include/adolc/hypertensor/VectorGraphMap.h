@@ -21,16 +21,19 @@ class VectorGraphMap : public VectorGraph<T> {
   int get_size() const;
 
   bool has_live(T target) const;
-  int get_byte_size() const;
+  int byte_size() const;
   void write_to_byte(char* buf) const;
   void debug() const;
 
   class iterator : public VectorGraph<T>::iterator {
    public:
+    iterator(VectorGraphMap<T>::iterator* c_iter):_data(c_iter->_data),
+        iter(c_iter->iter) {};
     iterator(std::map<T, double>* _data_p):_data(_data_p) {};
     virtual ~iterator();
     bool reset();
     bool get_next(T& x, double& w);
+    typename VectorGraphMap<T>::iterator* copy_iter();
    private:
     const std::map<T, double>* const _data;
     typename std::map<T, double>::const_iterator iter;
@@ -41,6 +44,11 @@ class VectorGraphMap : public VectorGraph<T> {
  private:
   std::map<T, double> data;
 };
+
+template <typename T>
+typename VectorGraphMap<T>::iterator* VectorGraphMap<T>::iterator::copy_iter() {
+  return new VectorGraphMap<T>::iterator(this);
+}
 
 template <typename T>
 typename VectorGraph<T>::iterator* VectorGraphMap<T>::get_iterator() {
@@ -101,7 +109,6 @@ VectorGraphMap<T>::~VectorGraphMap() {
 
 template <typename T>
 void VectorGraphMap<T>::increase(T x, double v) {
-  if (v == 0.0) {return;}
   data[x]+=v;
 }
 
@@ -133,7 +140,7 @@ void VectorGraphMap<T>::debug() const {
 }
 
 template <typename T>
-int VectorGraphMap<T>::get_byte_size() const {
+int VectorGraphMap<T>::byte_size() const {
   return data.size() * (sizeof(T) + sizeof(double)) + sizeof(int);
 }
 

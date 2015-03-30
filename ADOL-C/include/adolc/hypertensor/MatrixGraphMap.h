@@ -22,7 +22,7 @@ class MatrixGraphMap : public MatrixGraph<T> {
   VectorGraph<T>* get_and_erase(T x);
   VectorGraph<T>* get(T x);
   int get_size() const;
-  int get_byte_size() const;
+  int byte_size() const;
   void write_to_byte(char*) const;
   void debug() const;
   typename MatrixGraph<T>::iterator* get_iterator();
@@ -80,6 +80,18 @@ template <typename T>
 VectorGraph<T>* MatrixGraphMap<T>::get_and_erase(T x) {
   VectorGraph<T>* ret = new VectorGraphMap<T>(std::move(data[x]));
   data.erase(x);
+#ifdef ENABLE_HYPER_MPI
+// Because we can not guarantee the index order in mpi, we have to do this
+  typename std::map<T, std::map<T, double> >::iterator t_iter;
+  t_iter = data.begin();
+  while(t_iter != data.end()) {
+    if (t_iter->second.find(x) != t_iter->second.end()) {
+      ret->increase(t_iter->first, t_iter->second[x]);
+      t_iter->second.erase(x);
+    }
+    ++t_iter;
+  }
+#endif
   return ret;
 }
 
@@ -158,7 +170,7 @@ void MatrixGraphMap<T>::debug() const {
 }
 
 template <typename T>
-int MatrixGraphMap<T>::get_byte_size() const {
+int MatrixGraphMap<T>::byte_size() const {
   return get_size() * (sizeof(double) + sizeof(T) * 2) + sizeof(int);
 }
 
@@ -187,7 +199,7 @@ void MatrixGraphMap<T>::write_to_byte(char* buf) const {
 
 template <typename T>
 MatrixGraphMap<T>::MatrixGraphMap(char* buf) {
-  data.clear;
+  data.clear();
   char* p = buf;
   int size = 0;
   T x;

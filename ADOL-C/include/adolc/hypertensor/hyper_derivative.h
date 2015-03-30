@@ -18,8 +18,9 @@ class HyperDerivative {
   HyperDerivative(char* buf);
   
   void init();
-  int get_byte_size();
+  int byte_size();
   void write_to_byte(char* buf);
+  void debug();
 
   VectorGraph<T>* adjoints;
   MatrixGraph<T>* hessian;
@@ -33,10 +34,21 @@ HyperDerivative<T>::HyperDerivative() {
 //  tensor = NULL;
 }
 template <typename T>
+int HyperDerivative<T>::byte_size() {
+  return adjoints->byte_size() + hessian->byte_size();
+}
+template <typename T>
+void HyperDerivative<T>::write_to_byte(char* buf) {
+  char* p = buf;
+  adjoints->write_to_byte(p);
+  p += adjoints->byte_size();
+  hessian->write_to_byte(p);
+}
+template <typename T>
 HyperDerivative<T>::HyperDerivative(char* buf) {
   char* p = buf;
   adjoints = new VectorGraphMap<T>(p);
-  p += adjoints.get_byte_size();
+  p += adjoints->byte_size();
   hessian = new MatrixGraphMap<T>(p);
 
 //  p += hessian.get_byte_size();
@@ -50,4 +62,9 @@ void HyperDerivative<T>::init() {
 //  if (tensor == NULL) tensor = new HyperGraphMap<T>();
 }
 
+template <typename T>
+void HyperDerivative<T>::debug() {
+  if (adjoints != NULL) adjoints->debug();
+  if (hessian != NULL) hessian->debug();
+}
 #endif // HYPER_DERIVATIVE_H_

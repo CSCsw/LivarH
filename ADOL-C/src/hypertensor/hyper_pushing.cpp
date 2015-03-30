@@ -7,6 +7,16 @@
 #include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/hyper_derivative.h>
 
+#ifdef ENABLE_HYPER_MPI
+#include "mpi.h"
+#define DEBUG_ID 99
+
+#define IF_MY_DEBUG if(myid==DEBUG_ID){
+
+#define END_MY_DEBUG }
+
+#endif
+
 void hyper_third(DerivativeInfo<locint>& info,
                 VectorGraph<locint>* adjoints,
                 MatrixGraph<locint>* hessian,
@@ -135,7 +145,7 @@ void hyper_hessian(DerivativeInfo<locint>& info,
                   double w,
                   VectorGraph<locint>* r) {
 //  std::cout << "In hessian" << std::endl;
-  VectorGraph<locint>::iterator* r_iter = r->get_iterator();
+  typename VectorGraph<locint>::iterator* r_iter = r->get_iterator();
   bool has_next = r_iter->reset();
   locint p;
   double pw;
@@ -197,13 +207,10 @@ void hyper_adjoints(DerivativeInfo<locint>& info,
                    VectorGraph<locint>* adjoints,
                    double w) {
 //  std::cout << "In adjoints" << std::endl;
-  if (w == 0.0) {
-    return;
-  }
-  if (info.dx != 0.0) {
+  if (info.x != NULLLOC) {
     adjoints->increase(info.x, w * info.dx);
   }
-  if (info.dy != 0.0) {
+  if (info.y != NULLLOC) {
     adjoints->increase(info.y, w * info.dy);
   }
 //  adjoints->debug();
@@ -220,7 +227,131 @@ void hyper_process_sac(DerivativeInfo<locint>& info,
   delete r;
 }
 
-void hyper_process_gd(HyperDerivative<locint>& local_gd,
+void hyper_hessian_gd(locint dep,
+                      VectorGraph<locint>* l_a,
+                      MatrixGraph<locint>* l_h,
+                      double w,
+                      VectorGraph<locint>* r,
+                      MatrixGraph<locint>* g_h) {
+  typename VectorGraph<locint>::iterator* r_iter = r->get_iterator();
+  bool has_next = r_iter->reset();
+  locint p;
+  double pw;
+  locint v;
+  double vw;
+  locint v2;
+  double vw2;
+  while (has_next) {
+    has_next = r_iter->get_next(p, pw);
+//    std::cout << p << "," << pw << std::endl;
+    if (p != dep) {
+      typename VectorGraph<locint>::iterator* a_iter = l_a->get_iterator();
+      bool a_has_next = a_iter->reset();
+      while (a_has_next) {
+        a_has_next = a_iter->get_next(v, vw);
+        if (p != v) {
+          g_h->increase(p, v, pw * vw);
+        } else {
+          g_h->increase(p, v, 2.0 * pw * vw);
+        }
+      }
+    } else { // p == dep
+      typename VectorGraph<locint>::iterator* a_iter = l_a->get_iterator();
+      bool a_has_next = a_iter->reset();
+      while(a_has_next) {
+        VectorGraph<locint>::iterator* a2_iter = a_iter->copy_iter();
+        bool a2_has_next = a_has_next;
+        a_has_next = a_iter->get_next(v, vw);
+        while(a2_has_next) {
+          a2_has_next = a2_iter->get_next(v2, vw2);
+          g_h->increase(v, v2, pw * vw * vw2);
+        }
+      }
+    }
+  } // while
+  if (w != 0.0) {
+    typename MatrixGraph<locint>::iterator* h_iter = l_h->get_iterator();
+    bool h_has_next = h_iter->reset();
+    while(h_has_next) {
+      h_has_next = h_iter->get_next(v, v2, vw);
+      g_h->increase(v, v2, w * vw);
+    }
+  }
+//  hessian->debug();
+  delete r_iter;
+}
+
+void hyper_adjoints_gd(VectorGraph<locint>* l_a,
+                       VectorGraph<locint>* g_a,
+                       double w) {
+  if (w != 0.0) {
+    locint v;
+    double vw;
+    typename VectorGraph<locint>::iterator* a_iter = l_a->get_iterator();
+    bool a_has_next = a_iter->reset();
+    while(a_has_next) {
+      a_has_next = a_iter->get_next(v, vw);
+      g_a->increase(v, w * vw);
+    }
+  }
+}
+
+void hyper_process_gd(locint dep,
+                      HyperDerivative<locint>& local_gd,
                       HyperDerivative<locint>& global_gd) {
-  
-} 
+#ifdef ENABLE_HYPER_MPI
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  if (myid == DEBUG_ID) {
+    global_gd.debug();
+  }
+#endif
+  IF_MY_DEBUG
+  std::cout << "Processing dep: " << dep << std::endl;
+  END_MY_DEBUG
+  double w = global_gd.adjoints->get_and_erase(dep);
+  IF_MY_DEBUG
+  std::cout << " w = " << w << std::endl;
+  END_MY_DEBUG
+  VectorGraph<locint>* r = global_gd.hessian->get_and_erase(dep);
+  IF_MY_DEBUG
+  r->debug();
+  global_gd.debug();
+  END_MY_DEBUG
+  // Hessian
+  hyper_hessian_gd(dep, local_gd.adjoints, local_gd.hessian,
+                   w, r, global_gd.hessian);
+  // Adjoints
+  hyper_adjoints_gd(local_gd.adjoints, global_gd.adjoints, w);
+  delete r;
+#ifdef ENABLE_HYPER_MPI
+  if (myid == DEBUG_ID) {
+    global_gd.debug();
+  }
+#endif
+}
+
+void hyper_process_recv_gd(
+    locint dep,
+    HyperDerivative<locint>& local_gd,
+    std::map<locint, HyperDerivative<locint> >& global_gd) {
+  locint loc;
+#ifdef ENABLE_HYPER_MPI
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+#endif
+  IF_MY_DEBUG
+  std::cout << "local_gd :" << std::endl;
+  local_gd.debug();
+  std::cout << "---------" << std::endl;
+  END_MY_DEBUG
+  std::map<locint, HyperDerivative<locint> >::iterator t_iter;
+  t_iter = global_gd.begin();
+  while(t_iter != global_gd.end()) {
+    loc = t_iter->first;
+    if (global_gd[loc].adjoints->has_live(dep)) {
+      hyper_process_gd(dep, local_gd, global_gd[loc]);
+    }
+    ++t_iter;
+  }
+}

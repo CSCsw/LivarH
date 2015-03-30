@@ -12,6 +12,14 @@
 #include <adolc/hypertensor/hyper_pushing.h>
 #include <adolc/hypertensor/hyper_derivative.h>
 
+#ifdef ENABLE_HYPER_MPI
+
+#include "mpi.h"
+#include <adolc/hypertensor/generic_mpi_trace.h>
+extern std::vector<SRinfo> sr_stack;
+
+#endif
+
 #define GET_LAST_INDEX hyper_index.back(); hyper_index.pop_back();
 #define GET_LAST_VALUE hyper_value.back(); hyper_value.pop_back();
 #define POP_LAST_VALUE(n) for(int i = 0; i < n; ++i) {hyper_value.pop_back();}
@@ -35,6 +43,11 @@ int hyper_mpi_reverse(short tag,
   ADOLC_OPENMP_THREAD_NUMBER;
   ADOLC_OPENMP_GET_THREAD_NUMBER;
   std::cout << "In hyper_third_reverse " << std::endl;
+#ifdef ENABLE_HYPER_MPI
+  std::vector<SRinfo>::reverse_iterator sr_riter;
+  sr_riter = sr_stack.rbegin();
+#endif
+
   unsigned char opcode;
   locint res;
   double coval = 0;
@@ -92,7 +105,7 @@ int hyper_mpi_reverse(short tag,
         GET_LAST_VALUE;
         global_gd[res].init();
         global_gd[res].adjoints->increase(res, 1.0);
-        std::cout << "Dep: " << res << std::endl;
+//        std::cout << "Dep: " << res << std::endl;
         break;
       case eq_plus_d:
         break;
@@ -491,6 +504,31 @@ int hyper_mpi_reverse(short tag,
         // TODO: third order
         break;
 #endif // ATRIG_ERF
+#ifdef ENABLE_HYPER_MPI
+      case ampi_send:
+        if (sr_riter->SR_tag == RMPI_SEND_TAG) {
+        } else {
+          std::cout << "HYPER MPI reverse trace Send ERROR!" << std::endl;
+        }
+        ++sr_riter;
+        break;
+      case ampi_recv:
+        if (sr_riter->SR_tag == RMPI_RECV_TAG) {
+          for(int i = 0; i < sr_riter->count; i++) {
+            opcode = get_op_r();
+            if (opcode == assign_ind) {
+              GET_LAST_INDEX;
+              GET_LAST_VALUE;
+            } else {
+              std::cout << "HYPER MPI reverse Recv opcode error!" << std::endl;
+            }
+          }
+        } else {
+          std::cout << "HYPER MPI reverse trace RecvERROR!" << std::endl;
+        }
+        ++sr_riter;
+        break;
+#endif
       default:
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
@@ -507,12 +545,62 @@ int hyper_mpi_reverse(short tag,
       locint dep;
       while(iter != global_gd.end()) {
         dep = iter->first;
+//        std::cout << "Dep: " << dep << std::endl;
+//        global_gd[dep].debug();
         if (global_gd[dep].adjoints->has_live(info.r)) {
           hyper_process_sac(info, global_gd[dep]);
         }
+        ++iter;
       }
     }
     opcode = get_op_r(); 
   }
   end_sweep();
+}
+
+void hyper_mpi_forward(std::map<locint, HyperDerivative<locint> >& global_gd) {
+  int myid;
+  locint loc;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  for(const SRinfo& sr_info: sr_stack) {
+    if (sr_info.SR_tag == RMPI_SEND_TAG) {
+      int total_buf_size = 0;
+      for(int i = 0; i < sr_info.count; i++) {
+        loc = sr_info.loc + i;
+        total_buf_size += global_gd[loc].byte_size();
+      }
+      char* buf = (char*)malloc(sizeof(char*) * total_buf_size);
+      total_buf_size = 0;
+      for(int i = 0; i < sr_info.count; i++) {
+        loc = sr_info.loc + i;
+        global_gd[loc].write_to_byte(&buf[total_buf_size]);
+        total_buf_size += global_gd[loc].byte_size();
+        global_gd.erase(loc);
+      }
+      MPI_Send(&total_buf_size, 1, MPI_INT, sr_info.peer,
+               sr_info.tag, sr_info.comm);
+      MPI_Send((void*)buf, total_buf_size, MPI_CHAR, sr_info.peer,
+               sr_info.tag, sr_info.comm);
+//      std::cout << myid << " send size " << total_buf_size << std::endl;
+      free(buf);
+    } else {
+      int total_buf_size = 0;
+      int buf_size;
+      MPI_Recv(&total_buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
+               sr_info.comm, MPI_STATUS_IGNORE);
+//      std::cout << myid << " recv size " << total_buf_size << std::endl;
+      char* buf = (char*)malloc(sizeof(char) * total_buf_size);
+      MPI_Recv((void*)buf, total_buf_size, MPI_CHAR, sr_info.peer,
+               sr_info.tag, sr_info.comm, MPI_STATUS_IGNORE);
+      total_buf_size = 0;
+      for(int i = 0; i < sr_info.count; i++) {
+        loc = sr_info.loc + i;
+        HyperDerivative<locint> recv_gd(&(buf[total_buf_size]));
+        total_buf_size += recv_gd.byte_size();
+//        recv_gd.debug();      
+        hyper_process_recv_gd(loc, recv_gd, global_gd);
+      }
+      free(buf);
+    }
+  }
 }
