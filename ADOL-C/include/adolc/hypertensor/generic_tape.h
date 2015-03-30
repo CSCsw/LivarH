@@ -13,6 +13,7 @@ int generic_tape(short tag,
                  int indep,
                  const double* basepoint,
                  std::map<locint, locint>& ind_map,
+                 std::map<locint, locint>& dep_map,
                  std::vector<locint>& hyper_index,
                  std::vector<double>& hyper_value);
 

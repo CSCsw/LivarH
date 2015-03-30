@@ -12,13 +12,6 @@
 #include <adolc/hypertensor/generic_tape.h>
 #include <adolc/hypertensor/generic_mpi_trace.h>
 #include "mpi.h"
-/*
-#define TRANSLATE_ARG(arg) (index_translate[arg])
-#define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
-
-#define TRANSLATE_IND(ind) TRANSLATE_RES(ind)
-#define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
-*/
 
 #define TRANSLATE_ARG(arg) (arg + max_ind)
 #define TRANSLATE_RES(res) (res + max_ind)
@@ -30,21 +23,13 @@
 extern std::vector<SRinfo> sr_stack;
 extern std::vector<double> dummy_ind_vec;
 
-/*
-static locint translate_result(std::map<locint, locint>& index_translate,
-                               locint& max_ind,
-                               locint res) {
-  locint ret = max_ind;
-  ++max_ind;
-  index_translate[res] = ret;
-  return ret;
-}
-*/
+
 int generic_tape(short tag,
                  int depcheck,
                  int indcheck,
                  const double* basepoint,
                  std::map<locint, locint>& ind_map,
+                 std::map<locint, locint>& dep_map,
                  std::vector<locint>& hyper_index,
                  std::vector<double>& hyper_value) {
   std::cout << "In generic_tape" << std::endl;
@@ -60,17 +45,20 @@ int generic_tape(short tag,
 
   ADOLC_OPENMP_THREAD_NUMBER;
   ADOLC_OPENMP_GET_THREAD_NUMBER;
-  locint index_ind = 0;
-  locint max_ind = 0;
+
   int myid;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-  max_ind = myid * LOCINT_PER_PROC;
 
   std::map<locint, locint> index_translate; 
   std::vector<SRinfo>::iterator sr_iter;
   sr_iter = sr_stack.begin();
   init_for_sweep(tag);
 
+  locint index_ind = 0;
+  locint max_ind = 0;
+  max_ind = myid * LOCINT_PER_PROC;
+  locint index_dep = ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS];
+//  std::cout << "#dep = " << index_dep << std::endl;
   if (indcheck+dummy_ind_vec.size() != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) {
     fprintf(DIAG_OUT,"ADOL-C error: Tape_doc on tape %d  aborted!\n",tag);
     fprintf(DIAG_OUT,"Number of dependent (%d) and/or independent (%d) "
@@ -151,6 +139,7 @@ int generic_tape(short tag,
         } else {
           std::cout << "FATAL error in dummy independent!" << std::endl;
         }
+        ind_map[TRANSLATE_IND(res)] = index_ind;
         index_ind++;
         hyper_index.push_back(TRANSLATE_IND(res));
         hyper_value.push_back(dp_T0[res]);
@@ -158,6 +147,8 @@ int generic_tape(short tag,
         break;
       case assign_dep:
         res = get_locint_f();
+        index_dep--;
+        dep_map[TRANSLATE_DEP(res)] = index_dep;
         hyper_index.push_back(TRANSLATE_DEP(res));
         hyper_value.push_back(dp_T0[res]);
 //        std::cout << res << " D--> " << hyper_index.back() << std::endl;

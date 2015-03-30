@@ -17,6 +17,7 @@ class GenericDerivative {
   double get(const OpenCombMultiSet<T>& set);
   void debug() const;
   void find_and_erase(T target, GenericDerivative& gd);
+  int get_size_for_order(int order);
   int to_byte(char* buf);
   int byte_size();
   class iterator {
@@ -43,6 +44,14 @@ class GenericDerivative {
   size_t mpi_byte_size;
   std::vector<std::map<OpenCombMultiSet<T>, double> > info;
 };
+
+template <typename T>
+int GenericDerivative<T>::get_size_for_order(int order) {
+  if ((order>0) && (order <= d)) {
+    return info[order-1].size();
+  }
+  return 0;
+}
 
 template <typename T>
 void GenericDerivative<T>::clear() {
