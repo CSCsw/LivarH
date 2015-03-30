@@ -13,7 +13,6 @@ int generic_reverse(short tag,
 
 void generic_d_tuples(int order,
                       DerivativeInfo<locint>& info,
-                      std::set<locint>& live_set,
                       GenericDerivative<locint>& global_gd,
                       GenericDerivative<locint>& local_gd,
                       GenericDerivative<locint>& temp_gd);

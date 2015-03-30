@@ -41,7 +41,6 @@ int generic_reverse(short tag,
   GenericDerivative<locint> temp_gd(order);
   GenericDerivative<locint> local_gd(order);
   OpenCombMultiSet<locint> d_set;
-  std::set<locint> live_set;
   unsigned char opcode;
   locint res;
   double coval = 0;
@@ -212,9 +211,8 @@ int generic_reverse(short tag,
         {
           info.opcode = plus_a_a;
           populate_derivative_table(order, info, local_gd);
-          live_set.erase(info.r);
           global_gd.find_and_erase(info.r, temp_gd);
-          generic_d_tuples(order, info, live_set,
+          generic_d_tuples(order, info,
                            global_gd, local_gd, temp_gd);
         }
         local_gd.clear();
@@ -234,9 +232,8 @@ int generic_reverse(short tag,
         {
           info.opcode = min_a_a;
           populate_derivative_table(order, info, local_gd);
-          live_set.erase(info.r);
           global_gd.find_and_erase(info.r, temp_gd);
-          generic_d_tuples(order, info, live_set,
+          generic_d_tuples(order, info,
                            global_gd, local_gd, temp_gd);
         }
         local_gd.clear();
@@ -419,9 +416,8 @@ int generic_reverse(short tag,
     opcode = get_op_r();
     // This is where we should do the work
     if (info.r != NULLLOC) {
-      live_set.erase(info.r);
       global_gd.find_and_erase(info.r, temp_gd);
-      generic_d_tuples(order, info, live_set,
+      generic_d_tuples(order, info,
                        global_gd, local_gd, temp_gd);
     }
   }
@@ -614,7 +610,6 @@ void generate_unary_tuples(int curr_level,
 
 void generic_d_tuples(int order,
                       DerivativeInfo<locint>& info,
-                      std::set<locint>& live_set,
                       GenericDerivative<locint>& global_gd,
                       GenericDerivative<locint>& local_gd,
                       GenericDerivative<locint>& temp_gd) {
@@ -686,8 +681,6 @@ void generic_d_tuples(int order,
       }
       temp_has_next = temp_iter.move_to_next();
     }
-    live_set.insert(info.y);
-    live_set.insert(info.x);
   } else if (info.x != NULLLOC) {
     //unary case
     while (temp_has_next) {
@@ -720,7 +713,6 @@ void generic_d_tuples(int order,
       }
       temp_has_next = temp_iter.move_to_next();
     }
-    live_set.insert(info.x);
   }
 /*
 //if (myid == DEBUG_ID) {

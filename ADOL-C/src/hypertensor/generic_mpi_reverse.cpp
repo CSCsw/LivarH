@@ -19,13 +19,13 @@
 #define GET_LAST_VALUE hyper_value.back(); hyper_value.pop_back();
 #define POP_LAST_VALUE(n) for(int i = 0; i < n; ++i) {hyper_value.pop_back();}
 
-#define DEBUG_ID 0
+#define DEBUG_ID 99
 
 extern std::vector<SRinfo> sr_stack;
 
 void generic_mpi_process_sac(int order,
                              DerivativeInfo<locint>& info,
-                             std::map<locint, std::set<locint> >& live_set,
+                             std::map<locint, std::set<locint> >& r_live_set,
                              GenericDerivative<locint>& local_gd,
                              GenericDerivative<locint>& temp_gd,
                              std::map<locint, GenericDerivative<locint> >& global_gd);
@@ -34,7 +34,7 @@ int generic_mpi_reverse(short tag,
                        int order,
                        std::vector<locint>& hyper_index,
                        std::vector<double>& hyper_value,
-                       std::map<locint, std::set<locint> >& live_set,
+                       std::map<locint, std::set<locint> >& r_live_set,
                        std::map<locint, GenericDerivative<locint> >& global_gd) {
 //  std::cout << "In generic reverse" << std::endl;
 // static set partition generator
@@ -110,7 +110,7 @@ int generic_mpi_reverse(short tag,
           GenericDerivative<locint> dummy_gd(order);
           dummy_gd.increase(dep, 1.0);
           global_gd.insert(std::make_pair(res, dummy_gd));
-          live_set[res].insert(res);
+          r_live_set[res].insert(res);
         }
         GET_LAST_VALUE;
 //        std::cout << "Dummy Dep: " << res << std::endl;
@@ -223,7 +223,7 @@ int generic_mpi_reverse(short tag,
         {
           info.opcode = plus_a_a;
           populate_derivative_table(order, info, local_gd);
-          generic_mpi_process_sac(order, info, live_set,
+          generic_mpi_process_sac(order, info, r_live_set,
                                   local_gd, temp_gd, global_gd);
         }
         local_gd.clear();
@@ -244,7 +244,7 @@ int generic_mpi_reverse(short tag,
         {
           info.opcode = min_a_a;
           populate_derivative_table(order, info, local_gd);
-          generic_mpi_process_sac(order, info, live_set,
+          generic_mpi_process_sac(order, info, r_live_set,
                                   local_gd, temp_gd, global_gd);
         }
         local_gd.clear();
@@ -450,7 +450,7 @@ int generic_mpi_reverse(short tag,
     opcode = get_op_r();
     // This is where we should do the work
     if (info.r != NULLLOC) {
-      generic_mpi_process_sac(order, info, live_set,
+      generic_mpi_process_sac(order, info, r_live_set,
                               local_gd, temp_gd, global_gd);
     }
   }
@@ -459,7 +459,7 @@ int generic_mpi_reverse(short tag,
 
 void generic_mpi_process_sac(int order,
                              DerivativeInfo<locint>& info,
-                             std::map<locint, std::set<locint> >& live_set,
+                             std::map<locint, std::set<locint> >& r_live_set,
                              GenericDerivative<locint>& local_gd,
                              GenericDerivative<locint>& temp_gd,
                              std::map<locint, GenericDerivative<locint> >& global_gd) {
@@ -472,26 +472,16 @@ void generic_mpi_process_sac(int order,
             << " x = " << info.x
             << " y = " << info.y << std::endl;
 */
-  typename std::map<locint, std::set<locint> >::iterator dep_iter;
+  std::set<locint> dep_set = std::move(r_live_set[info.r]);
+  r_live_set.erase(info.r);
+  typename std::set<locint>::iterator dep_iter;
   locint dummy_dep;
-  dep_iter = live_set.begin();
-  while(dep_iter != live_set.end() ) {
-    dummy_dep = dep_iter->first;
-/*
-    std::cout << "check dep: " << dummy_dep << "size = " << live_set[dummy_dep].size() << std::endl;
-    typename std::set<locint>::iterator set_iter;
-    set_iter = live_set[dummy_dep].begin();
-    while(set_iter != live_set[dummy_dep].end()) {
-      std::cout << *set_iter << std::endl;
-      ++set_iter;
-    }
-*/
-    if (dep_iter->second.find(info.r) != dep_iter->second.end()) {
+  dep_iter = dep_set.begin();
+  while(dep_iter != dep_set.end() ) {
+    dummy_dep = *dep_iter;
       // do the work
-      live_set[dummy_dep].erase(info.r);
-      global_gd[dummy_dep].find_and_erase(info.r, temp_gd);
-      generic_d_tuples(order, info, live_set[dummy_dep],
-                       global_gd[dummy_dep], local_gd, temp_gd);
+    global_gd[dummy_dep].find_and_erase(info.r, temp_gd);
+    generic_d_tuples(order, info, global_gd[dummy_dep], local_gd, temp_gd);
 /*
       std::cout << "dummy_dep = " << dummy_dep << std::endl;
       std::cout << "local_gd:" << std::endl;
@@ -500,8 +490,13 @@ void generic_mpi_process_sac(int order,
       global_gd[dummy_dep].debug();
       std::cout << std::endl;
 */
+    if (info.x != NULLLOC) {
+      r_live_set[info.x].insert(dummy_dep);
     }
-    dep_iter++;
+    if (info.y != NULLLOC) {
+      r_live_set[info.y].insert(dummy_dep);
+    }
+    ++dep_iter;
   }
 }
 
@@ -576,6 +571,8 @@ double symmetric_coeff(
     set_vec[i].debug();
     std::cout << std::endl;
   }
+  ss_set.debug();
+  std::cout << std::endl;
 */
   global_gd.increase(ss_set, w * coeff);
 }
@@ -605,7 +602,8 @@ void compute_multi_set(
   iter.get_curr_pair(dc, cw);
 //  dc.debug();
 //  std::cout << " cw = " << cw << std::endl;
-//  this_order = dc.size();
+
+  this_order = dc.size();
   if (curr_level == 1) {
     set_vec.push_back(dc);
     set_count.push_back(1);
@@ -624,8 +622,13 @@ void compute_multi_set(
   bool has_next = iter.move_to_next();
   while(has_next) {
     iter.get_curr_pair(dc, cw);
-//    dc.debug();
-//    std::cout << " cw = " << cw << std::endl;
+/*
+    dc.debug();
+    std::cout << " cw = " << cw << std::endl;
+    std::cout << "this_order = " << this_order
+              << " max_lv = " << max_level
+              << " cur_lv = " << curr_level << std::endl;
+*/
     if (w != 0) {
       this_order = dc.size();
       set_vec.push_back(std::move(dc));
@@ -644,8 +647,9 @@ void compute_multi_set(
 }
 
 void generic_tuples(int order,
+                    locint dep,
                     locint res,
-                    std::set<locint>& live_set,
+                    std::map<locint, std::set<locint> >& r_live_set,
                     GenericDerivative<locint>& global_gd,
                     GenericDerivative<locint>& local_gd,
                     GenericDerivative<locint>& temp_gd) {
@@ -661,13 +665,23 @@ void generic_tuples(int order,
     local_iter.get_curr_pair(s_set, w);
     s_iter = s_set.begin();
     while(s_iter != s_set.end()) {
-      live_set.insert(*s_iter);
+      r_live_set[*s_iter].insert(dep);
       ++s_iter;
     }
     local_has_next = local_iter.move_to_next();
   }
 //  print_live_set(live_set);
 
+
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  if (myid == DEBUG_ID) {
+    std::cout << "debug info" << std::endl;
+    temp_gd.debug();
+    std::cout << std::endl << "local:";
+    local_gd.debug();
+    std::cout << std::endl;
+  }
 // compute derivatives
   typename GenericDerivative<locint>::iterator temp_iter;
   temp_iter = temp_gd.get_new_iterator();
@@ -676,8 +690,11 @@ void generic_tuples(int order,
     temp_iter.get_curr_pair(s_set, w);
     int t_size = s_set.count(res);
     int s_size = s_set.size() - t_size;
-//    s_set.debug();
-//    std::cout << " w = " << w << std::endl;
+/*
+    s_set.debug();
+    std::cout << " w = " << w << " t = " << t_size
+              << " s = " << s_size << std::endl;
+*/
 
     while (s_set.count(res) != 0) {
       s_set.remove(res);
@@ -720,8 +737,9 @@ bool generic_is_linear(GenericDerivative<locint>& local_gd) {
 }
 
 void generic_linear_tuples(int order,
+                           locint dep,
                            locint res,
-                           std::set<locint>& live_set,
+                           std::map<locint, std::set<locint> >& r_live_set,
                            GenericDerivative<locint>& global_gd,
                            GenericDerivative<locint>& local_gd,
                            GenericDerivative<locint>& temp_gd) {
@@ -736,7 +754,7 @@ void generic_linear_tuples(int order,
   local_iter.get_curr_pair(s_set, w);
   s_iter = s_set.begin();
   x = *s_iter;
-  live_set.insert(x);
+  r_live_set[x].insert(dep);
 
 // compute derivatives
   typename GenericDerivative<locint>::iterator temp_iter;
@@ -761,10 +779,12 @@ void generic_linear_tuples(int order,
 void generic_mpi_process_recv_gd(
     int order,
     locint res,
-    std::map<locint, std::set<locint> >& live_set,
+    std::map<locint, std::set<locint> >& r_live_set,
     GenericDerivative<locint>& recv_gd,
     std::map<locint, GenericDerivative<locint> >& global_gd) {
-  typename std::map<locint, std::set<locint> >::iterator dep_iter;
+
+  std::set<locint> dep_set = std::move(r_live_set[res]);
+  typename std::set<locint>::iterator dep_iter;
   locint dummy_dep;
   GenericDerivative<locint> temp_gd(order);
 
@@ -776,32 +796,29 @@ void generic_mpi_process_recv_gd(
 //    std::cout << " res = " << res << " is linear : ";
 //    recv_gd.debug();
 //    std::cout << std::endl;
-    dep_iter = live_set.begin();
-    while(dep_iter != live_set.end() ) {
-      dummy_dep = dep_iter->first;
-      if (dep_iter->second.find(res) != dep_iter->second.end()) {
+
+    dep_iter = dep_set.begin();
+    while(dep_iter != dep_set.end() ) {
+      dummy_dep = *dep_iter;
         // do the work
-        live_set[dummy_dep].erase(res);
-        global_gd[dummy_dep].find_and_erase(res, temp_gd);
-        generic_linear_tuples(order, res, live_set[dummy_dep],
-                              global_gd[dummy_dep], recv_gd, temp_gd);
-      }
-      dep_iter++;
+      global_gd[dummy_dep].find_and_erase(res, temp_gd);
+      generic_linear_tuples(order, dummy_dep, res, r_live_set,
+                            global_gd[dummy_dep], recv_gd, temp_gd);
+      ++dep_iter;
     }
     return;
   }
 
-  dep_iter = live_set.begin();
-  while(dep_iter != live_set.end() ) {
-    dummy_dep = dep_iter->first;
-    if (dep_iter->second.find(res) != dep_iter->second.end()) {
+  
+  dep_iter = dep_set.begin();
+  while(dep_iter != dep_set.end() ) {
+    dummy_dep = *dep_iter;
       // do the work
-      live_set[dummy_dep].erase(res);
-      global_gd[dummy_dep].find_and_erase(res, temp_gd);
-      generic_tuples(order, res, live_set[dummy_dep],
-                       global_gd[dummy_dep], recv_gd, temp_gd);
-    }
-    dep_iter++;
+//    std::cout << "Dummy dep : " << dummy_dep << std::endl;
+    global_gd[dummy_dep].find_and_erase(res, temp_gd);
+    generic_tuples(order, dummy_dep, res, r_live_set,
+                   global_gd[dummy_dep], recv_gd, temp_gd);
+    ++dep_iter;
   }
 }
 
@@ -846,7 +863,7 @@ void generic_mpi_forward(int order,
         loc = sr_info.loc + i;
         GenericDerivative<locint> recv_gd(&(buf[total_buf_size]), buf_size);
         total_buf_size += buf_size;
-//        recv_gd.debug();      
+//        recv_gd.debug();
         generic_mpi_process_recv_gd(order, loc,
                                     live_set, recv_gd, global_gd);
       }
