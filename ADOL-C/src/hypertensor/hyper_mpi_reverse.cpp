@@ -1,5 +1,6 @@
 #include <vector>
 #include <map>
+#include <set>
 #include <iostream>
 
 #include "oplate.h"
@@ -47,7 +48,7 @@ int hyper_mpi_reverse(short tag,
   std::vector<SRinfo>::reverse_iterator sr_riter;
   sr_riter = sr_stack.rbegin();
 #endif
-
+  std::map<locint, std::set<locint> > reverse_live;
   unsigned char opcode;
   locint res;
   double coval = 0;
@@ -105,6 +106,7 @@ int hyper_mpi_reverse(short tag,
         GET_LAST_VALUE;
         global_gd[res].init();
         global_gd[res].adjoints->increase(res, 1.0);
+        reverse_live[res].insert(res); 
 //        std::cout << "Dep: " << res << std::endl;
         break;
       case eq_plus_d:
@@ -540,6 +542,7 @@ int hyper_mpi_reverse(short tag,
               << info.pxx << "," << info.pxy << "," << info.pyy << std::endl;
 */
     if (info.r != NULLLOC) {
+/*
       typename std::map<locint, HyperDerivative<locint> >::iterator iter;
       iter = global_gd.begin();
       locint dep;
@@ -549,6 +552,23 @@ int hyper_mpi_reverse(short tag,
 //        global_gd[dep].debug();
         if (global_gd[dep].adjoints->has_live(info.r)) {
           hyper_process_sac(info, global_gd[dep]);
+        }
+        ++iter;
+      }
+*/
+      locint dep;
+      std::set<locint> dep_set = std::move(reverse_live[info.r]);
+      reverse_live.erase(info.r);
+      typename std::set<locint>::iterator iter;
+      iter = dep_set.begin();
+      while(iter != dep_set.end()) {
+        dep = *iter;
+        hyper_process_sac(info, global_gd[dep]);
+        if (info.x != NULLLOC) {
+          reverse_live[info.x].insert(dep);
+        }
+        if (info.y != NULLLOC) {
+          reverse_live[info.y].insert(dep);
         }
         ++iter;
       }
