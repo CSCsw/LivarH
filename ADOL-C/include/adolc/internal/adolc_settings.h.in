@@ -34,4 +34,5 @@ typedef @REAL_TYPE@ revreal;
 /* Enable/disable preaccumulation in edge_hess */
 @PREACC@
 
+@GENERIC_MPI@
 #endif

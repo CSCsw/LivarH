@@ -166,6 +166,23 @@ else
 fi
 AC_SUBST(PREACC)
 
+#ADOL-C Edge_Hess Preaccumulation facility
+AC_MSG_CHECKING(whether to enable MPI_Send/Recv in generic reverse mode)
+AC_ARG_ENABLE(generic_mpi,
+            [
+AS_HELP_STRING([--enable-generic-mpi],[enable MPI_Send/Recv in generic reverse mode [default=no]])],
+            [generic_mpi=$enableval],
+            [generic_mpi=no])
+
+AC_MSG_RESULT($generic_mpi)
+
+if test x$generic_mpi = xyes ; then
+  GENERIC_MPI="#define ENABLE_GENERIC_MPI 1"
+else
+  GENERIC_MPI="#undef ENABLE_GENERIC_MPI"
+fi
+AC_SUBST(GENERIC_MPI)
+
 
 
 AC_MSG_CHECKING(whether to use 32-bit or 64-bit locations)
@@ -591,6 +608,8 @@ if test x$preacc = xyes; then
      warn=true
 fi
 
+echo \
+"  Enable MPI_Send/Recv in generic mpi: ${generic_mpi}"
 echo
 
 echo \
