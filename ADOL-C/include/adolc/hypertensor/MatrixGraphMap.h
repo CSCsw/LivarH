@@ -3,7 +3,7 @@
 
 #include <map>
 
-#include <adolc/hypertensor/hyper_common.h>
+#include <adolc/adolc.h>
 
 #include "VectorGraph.h"
 #include "VectorGraphMap.h"
@@ -80,7 +80,7 @@ template <typename T>
 VectorGraph<T>* MatrixGraphMap<T>::get_and_erase(T x) {
   VectorGraph<T>* ret = new VectorGraphMap<T>(std::move(data[x]));
   data.erase(x);
-#ifdef ENABLE_HYPER_MPI
+#ifdef ENABLE_GENERIC_MPI
 // Because we can not guarantee the index order in mpi, we have to do this
   typename std::map<T, std::map<T, double> >::iterator t_iter;
   t_iter = data.begin();

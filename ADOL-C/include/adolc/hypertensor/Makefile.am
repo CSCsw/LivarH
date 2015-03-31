@@ -16,7 +16,6 @@ libhypertensorinclude_HEADERS = hyper_common.h\
                                 hyper_mpi_tensor.h\
                                 hyper_mpi_reverse.h\
                                 hyper_pushing.h\
-                                hyper_tape.h\
                                 VectorGraph.h VectorGraphMap.h\
                                 MatrixGraph.h MatrixGraphMap.h\
                                 hyper_derivative.h\

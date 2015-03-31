@@ -7,7 +7,13 @@
 #include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/hyper_derivative.h>
 
-#ifdef ENABLE_HYPER_MPI
+
+#ifndef ENABLE_GENERIC_MPI
+
+#define IF_MY_DEBUG if(1==0){
+#define END_MY_DEBUG }
+
+#else // ENABLE_GENERIC_MPI
 #include "mpi.h"
 #define DEBUG_ID 99
 
@@ -15,7 +21,7 @@
 
 #define END_MY_DEBUG }
 
-#endif
+#endif // ENABLE_GENERIC_MPI
 
 void hyper_third(DerivativeInfo<locint>& info,
                 VectorGraph<locint>* adjoints,
@@ -299,7 +305,7 @@ void hyper_adjoints_gd(VectorGraph<locint>* l_a,
 void hyper_process_gd(locint dep,
                       HyperDerivative<locint>& local_gd,
                       HyperDerivative<locint>& global_gd) {
-#ifdef ENABLE_HYPER_MPI
+#ifdef ENABLE_GENERIC_MPI
   int myid;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   if (myid == DEBUG_ID) {
@@ -324,7 +330,7 @@ void hyper_process_gd(locint dep,
   // Adjoints
   hyper_adjoints_gd(local_gd.adjoints, global_gd.adjoints, w);
   delete r;
-#ifdef ENABLE_HYPER_MPI
+#ifdef ENABLE_GENERIC_MPI
   if (myid == DEBUG_ID) {
     global_gd.debug();
   }
@@ -336,7 +342,7 @@ void hyper_process_recv_gd(
     HyperDerivative<locint>& local_gd,
     std::map<locint, HyperDerivative<locint> >& global_gd) {
   locint loc;
-#ifdef ENABLE_HYPER_MPI
+#ifdef ENABLE_GENERIC_MPI
   int myid;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 #endif

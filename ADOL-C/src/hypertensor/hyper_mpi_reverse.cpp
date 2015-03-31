@@ -13,7 +13,7 @@
 #include <adolc/hypertensor/hyper_pushing.h>
 #include <adolc/hypertensor/hyper_derivative.h>
 
-#ifdef ENABLE_HYPER_MPI
+#ifdef ENABLE_GENERIC_MPI
 
 #include "mpi.h"
 #include <adolc/hypertensor/generic_mpi_trace.h>
@@ -44,7 +44,7 @@ int hyper_mpi_reverse(short tag,
   ADOLC_OPENMP_THREAD_NUMBER;
   ADOLC_OPENMP_GET_THREAD_NUMBER;
   std::cout << "In hyper_third_reverse " << std::endl;
-#ifdef ENABLE_HYPER_MPI
+#ifdef ENABLE_GENERIC_MPI
   std::vector<SRinfo>::reverse_iterator sr_riter;
   sr_riter = sr_stack.rbegin();
 #endif
@@ -226,21 +226,30 @@ int hyper_mpi_reverse(short tag,
         PSEUDO_BINARY_3;
         break;
       case eq_plus_prod:
-/*
+
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
         POP_LAST_VALUE(3);
         info.dx = 1.0; info.dy = 1.0;
         {
-          double w = adjoints->get_and_erase(info.r);
-          VectorGraph<locint>* r = hessian->get_and_erase(info.r);
-          MatrixGraph<locint>* e = tensor->get_and_erase(info.r);
-          hyper_third(info, adjoints, hessian, tensor, w, r, e);
-          hyper_hessian(info, adjoints, hessian, w, r);
-          hyper_adjoints(info, adjoints, w);
-          delete r;
-          delete e;
+          locint dep;
+          std::set<locint> dep_set = std::move(reverse_live[info.r]);
+          reverse_live.erase(info.r);
+          typename std::set<locint>::iterator iter;
+          iter = dep_set.begin();
+          while(iter != dep_set.end()) {
+            dep = *iter;
+            hyper_process_sac(info, global_gd[dep]);
+            global_gd[dep].debug();
+            if (info.x != NULLLOC) {
+              reverse_live[info.x].insert(dep);
+            }
+            if (info.y != NULLLOC) {
+              reverse_live[info.y].insert(dep);
+            }
+            ++iter;
+          }
         }
         
         res = info.y;
@@ -252,24 +261,32 @@ int hyper_mpi_reverse(short tag,
         info.dx = GET_LAST_VALUE;
         info.pxy = 1.0;
         PSEUDO_BINARY_2;
-*/
+
         break;
       case eq_min_prod:
-/*
         info.r = GET_LAST_INDEX;
         info.x = GET_LAST_INDEX;
         info.y = GET_LAST_INDEX;
         POP_LAST_VALUE(3);
         info.dx = 1.0; info.dy = -1.0;
         {
-          double w = adjoints->get_and_erase(info.r);
-          VectorGraph<locint>* r = hessian->get_and_erase(info.r);
-          MatrixGraph<locint>* e = tensor->get_and_erase(info.r);
-          hyper_third(info,adjoints, hessian, tensor, w, r, e);
-          hyper_hessian(info, adjoints, hessian, w, r);
-          hyper_adjoints(info, adjoints, w);
-          delete r;
-          delete e;
+          locint dep;
+          std::set<locint> dep_set = std::move(reverse_live[info.r]);
+          reverse_live.erase(info.r);
+          typename std::set<locint>::iterator iter;
+          iter = dep_set.begin();
+          while(iter != dep_set.end()) {
+            dep = *iter;
+            hyper_process_sac(info, global_gd[dep]);
+            global_gd[dep].debug();
+            if (info.x != NULLLOC) {
+              reverse_live[info.x].insert(dep);
+            }
+            if (info.y != NULLLOC) {
+              reverse_live[info.y].insert(dep);
+            }
+            ++iter;
+          }
         }
         
         res = info.y;
@@ -281,7 +298,6 @@ int hyper_mpi_reverse(short tag,
         info.dx = GET_LAST_VALUE;
         info.pxy = 1.0;
         PSEUDO_BINARY_2;
-*/
         break;
       case pos_sign_a:
         info.r = GET_LAST_INDEX;
@@ -506,7 +522,7 @@ int hyper_mpi_reverse(short tag,
         // TODO: third order
         break;
 #endif // ATRIG_ERF
-#ifdef ENABLE_HYPER_MPI
+#ifdef ENABLE_GENERIC_MPI
       case ampi_send:
         if (sr_riter->SR_tag == RMPI_SEND_TAG) {
         } else {
@@ -542,20 +558,6 @@ int hyper_mpi_reverse(short tag,
               << info.pxx << "," << info.pxy << "," << info.pyy << std::endl;
 */
     if (info.r != NULLLOC) {
-/*
-      typename std::map<locint, HyperDerivative<locint> >::iterator iter;
-      iter = global_gd.begin();
-      locint dep;
-      while(iter != global_gd.end()) {
-        dep = iter->first;
-//        std::cout << "Dep: " << dep << std::endl;
-//        global_gd[dep].debug();
-        if (global_gd[dep].adjoints->has_live(info.r)) {
-          hyper_process_sac(info, global_gd[dep]);
-        }
-        ++iter;
-      }
-*/
       locint dep;
       std::set<locint> dep_set = std::move(reverse_live[info.r]);
       reverse_live.erase(info.r);
@@ -564,6 +566,7 @@ int hyper_mpi_reverse(short tag,
       while(iter != dep_set.end()) {
         dep = *iter;
         hyper_process_sac(info, global_gd[dep]);
+//        global_gd[dep].debug();
         if (info.x != NULLLOC) {
           reverse_live[info.x].insert(dep);
         }
@@ -579,6 +582,7 @@ int hyper_mpi_reverse(short tag,
 }
 
 void hyper_mpi_forward(std::map<locint, HyperDerivative<locint> >& global_gd) {
+#ifdef ENABLE_GENERIC_MPI
   int myid;
   locint loc;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
@@ -623,4 +627,5 @@ void hyper_mpi_forward(std::map<locint, HyperDerivative<locint> >& global_gd) {
       free(buf);
     }
   }
+#endif
 }

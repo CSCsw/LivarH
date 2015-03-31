@@ -11,6 +11,11 @@
 #include <adolc/hypertensor/hyper_common.h>
 #include <adolc/hypertensor/generic_tape.h>
 #include <adolc/hypertensor/generic_mpi_trace.h>
+
+#define TEMP_INDEX (NULLLOC - 1)
+
+#ifdef ENABLE_GENERIC_MPI
+
 #include "mpi.h"
 
 #define TRANSLATE_ARG(arg) (arg + max_ind)
@@ -18,12 +23,25 @@
 #define TRANSLATE_IND(ind) (ind + max_ind)
 #define TRANSLATE_DEP(dep) (dep + max_ind)
 
-#define TEMP_INDEX (NULLLOC - 1)
-
-#ifdef ENABLE_GENERIC_MPI
 extern std::vector<SRinfo> sr_stack;
 extern std::vector<double> dummy_ind_vec;
-#endif
+
+#else // ENABLE_GENERIC_MPI
+
+#define TRANSLATE_ARG(arg) (index_translate[arg])
+#define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
+#define TRANSLATE_IND(ind) TRANSLATE_RES(ind)
+#define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
+static locint translate_result(std::map<locint, locint>& index_translate,
+                               locint& max_ind,
+                               locint res) {
+  locint ret = max_ind;
+  ++max_ind;
+  index_translate[res] = ret;
+  return ret;
+}
+
+#endif // ENABLE_GENERIC_MPI
 
 int generic_tape(short tag,
                  int depcheck,
@@ -52,6 +70,10 @@ int generic_tape(short tag,
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   std::vector<SRinfo>::iterator sr_iter;
   sr_iter = sr_stack.begin();
+#endif
+
+#ifndef ENABLE_GENERIC_MPI
+  std::map<locint, locint> index_translate;
 #endif
 
   init_for_sweep(tag);
@@ -149,10 +171,10 @@ int generic_tape(short tag,
           else {
           std::cout << "FATAL error in dummy independent!" << std::endl;
         }
-        ind_map[TRANSLATE_IND(res)] = index_ind;
-        index_ind++;
         hyper_index.push_back(TRANSLATE_IND(res));
         hyper_value.push_back(dp_T0[res]);
+        ind_map[TRANSLATE_ARG(res)] = index_ind;
+        index_ind++;
 //        std::cout << res << " I--> " << index_translate[res] << " = " << dp_T0[res] << std::endl;
         break;
       case assign_dep:
