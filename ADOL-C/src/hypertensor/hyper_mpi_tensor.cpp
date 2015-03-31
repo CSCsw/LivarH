@@ -61,7 +61,6 @@ int hyper_mpi_tensor(short tag,
   }
 */
 #ifdef ENABLE_GENERIC_MPI
-  std::cout << "XXX" << std::endl;
   gettimeofday(&tv1, NULL);
   hyper_mpi_forward(global_gd);
   gettimeofday(&tv2, NULL);

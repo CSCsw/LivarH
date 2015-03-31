@@ -241,7 +241,6 @@ int hyper_mpi_reverse(short tag,
           while(iter != dep_set.end()) {
             dep = *iter;
             hyper_process_sac(info, global_gd[dep]);
-            global_gd[dep].debug();
             if (info.x != NULLLOC) {
               reverse_live[info.x].insert(dep);
             }
@@ -278,7 +277,6 @@ int hyper_mpi_reverse(short tag,
           while(iter != dep_set.end()) {
             dep = *iter;
             hyper_process_sac(info, global_gd[dep]);
-            global_gd[dep].debug();
             if (info.x != NULLLOC) {
               reverse_live[info.x].insert(dep);
             }

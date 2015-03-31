@@ -10,7 +10,8 @@
 
 #define MAX_ORDER 5
 
-#define INDEX_PER_PROC 10000000
+#define TAPE_MAX_INDEPENDENT_NUM 100000
+#define INDEX_PER_PROC 100000000
 
 template <typename T>
 void T_SWAP(T&a, T& b) {

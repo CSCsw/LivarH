@@ -14,6 +14,8 @@
 
 #define TEMP_INDEX (NULLLOC - 1)
 
+
+/*
 #ifdef ENABLE_GENERIC_MPI
 
 #include "mpi.h"
@@ -42,6 +44,25 @@ static locint translate_result(std::map<locint, locint>& index_translate,
 }
 
 #endif // ENABLE_GENERIC_MPI
+*/
+#ifdef ENABLE_GENERIC_MPI
+#include "mpi.h"
+extern std::vector<SRinfo> sr_stack;
+extern std::vector<double> dummy_ind_vec;
+#endif
+
+#define TRANSLATE_ARG(arg) (index_translate[arg])
+#define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
+#define TRANSLATE_IND(ind) (translate_ind(index_translate, index_ind, ind))
+#define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
+static locint translate_result(std::map<locint, locint>& index_translate,
+                               locint& max_ind,
+                               locint res) {
+  locint ret = max_ind;
+  ++max_ind;
+  index_translate[res] = ret;
+  return ret;
+}
 
 int generic_tape(short tag,
                  int depcheck,
@@ -72,15 +93,14 @@ int generic_tape(short tag,
   sr_iter = sr_stack.begin();
 #endif
 
-#ifndef ENABLE_GENERIC_MPI
   std::map<locint, locint> index_translate;
-#endif
 
   init_for_sweep(tag);
 
   locint index_ind = 0;
   locint max_ind = 0;
-  max_ind = myid * LOCINT_PER_PROC;
+  locint index_begin = myid * INDEX_PER_PROC;
+  max_ind = index_begin + TAPE_MAX_INDEPENDENT_NUM;
   locint index_dep = ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS];
 //  std::cout << "#dep = " << index_dep << std::endl;
   int dummy_ind_vec_size = 0;
@@ -162,19 +182,25 @@ int generic_tape(short tag,
         res = get_locint_f();
         if (index_ind < indcheck) {
           dp_T0[res] = basepoint[index_ind];
+          index_translate[res] = index_begin + index_ind;
+          ind_map[TRANSLATE_ARG(res)] = index_ind;
+          index_ind++;
         }
 #ifdef ENABLE_GENERIC_MPI
           else if (index_ind < indcheck + dummy_ind_vec.size()){
           dp_T0[res] = dummy_ind_vec[index_ind - indcheck];
+          index_translate[res] =
+              index_begin + TAPE_MAX_INDEPENDENT_NUM + indcheck - index_ind - 1;
+          ind_map[TRANSLATE_ARG(res)] = index_ind;
+          index_ind++;
         }
 #endif
           else {
           std::cout << "FATAL error in dummy independent!" << std::endl;
         }
-        hyper_index.push_back(TRANSLATE_IND(res));
+
+        hyper_index.push_back(TRANSLATE_ARG(res));
         hyper_value.push_back(dp_T0[res]);
-        ind_map[TRANSLATE_ARG(res)] = index_ind;
-        index_ind++;
 //        std::cout << res << " I--> " << index_translate[res] << " = " << dp_T0[res] << std::endl;
         break;
       case assign_dep:

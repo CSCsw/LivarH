@@ -80,6 +80,7 @@ template <typename T>
 VectorGraph<T>* MatrixGraphMap<T>::get_and_erase(T x) {
   VectorGraph<T>* ret = new VectorGraphMap<T>(std::move(data[x]));
   data.erase(x);
+/*
 #ifdef ENABLE_GENERIC_MPI
 // Because we can not guarantee the index order in mpi, we have to do this
   typename std::map<T, std::map<T, double> >::iterator t_iter;
@@ -92,6 +93,7 @@ VectorGraph<T>* MatrixGraphMap<T>::get_and_erase(T x) {
     ++t_iter;
   }
 #endif
+*/
   return ret;
 }
 
