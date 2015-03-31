@@ -20,9 +20,10 @@
 
 #define TEMP_INDEX (NULLLOC - 1)
 
+#ifdef ENABLE_GENERIC_MPI
 extern std::vector<SRinfo> sr_stack;
 extern std::vector<double> dummy_ind_vec;
-
+#endif
 
 int generic_tape(short tag,
                  int depcheck,
@@ -32,7 +33,7 @@ int generic_tape(short tag,
                  std::map<locint, locint>& dep_map,
                  std::vector<locint>& hyper_index,
                  std::vector<double>& hyper_value) {
-  std::cout << "In generic_tape" << std::endl;
+//  std::cout << "In generic_tape" << std::endl;
   unsigned char opcode;
   locint size = 0;
   locint res = 0;
@@ -46,12 +47,13 @@ int generic_tape(short tag,
   ADOLC_OPENMP_THREAD_NUMBER;
   ADOLC_OPENMP_GET_THREAD_NUMBER;
 
-  int myid;
+  int myid = 0;
+#ifdef ENABLE_GENERIC_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-  std::map<locint, locint> index_translate; 
   std::vector<SRinfo>::iterator sr_iter;
   sr_iter = sr_stack.begin();
+#endif
+
   init_for_sweep(tag);
 
   locint index_ind = 0;
@@ -59,7 +61,11 @@ int generic_tape(short tag,
   max_ind = myid * LOCINT_PER_PROC;
   locint index_dep = ADOLC_CURRENT_TAPE_INFOS.stats[NUM_DEPENDENTS];
 //  std::cout << "#dep = " << index_dep << std::endl;
-  if (indcheck+dummy_ind_vec.size() != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) {
+  int dummy_ind_vec_size = 0;
+#ifdef ENABLE_GENERIC_MPI
+    dummy_ind_vec_size = dummy_ind_vec.size();
+#endif
+  if (indcheck+dummy_ind_vec_size != ADOLC_CURRENT_TAPE_INFOS.stats[NUM_INDEPENDENTS]) {
     fprintf(DIAG_OUT,"ADOL-C error: Tape_doc on tape %d  aborted!\n",tag);
     fprintf(DIAG_OUT,"Number of dependent (%d) and/or independent (%d) "
             "variables passed to Tape_doc is\ninconsistent with "
@@ -134,9 +140,13 @@ int generic_tape(short tag,
         res = get_locint_f();
         if (index_ind < indcheck) {
           dp_T0[res] = basepoint[index_ind];
-        } else if (index_ind < indcheck + dummy_ind_vec.size()){
+        }
+#ifdef ENABLE_GENERIC_MPI
+          else if (index_ind < indcheck + dummy_ind_vec.size()){
           dp_T0[res] = dummy_ind_vec[index_ind - indcheck];
-        } else {
+        }
+#endif
+          else {
           std::cout << "FATAL error in dummy independent!" << std::endl;
         }
         ind_map[TRANSLATE_IND(res)] = index_ind;
@@ -623,6 +633,7 @@ int generic_tape(short tag,
         get_locint_f();
       case ignore_me:
         break;
+#ifdef ENABLE_GENERIC_MPI
       case ampi_send:
         if (sr_iter->SR_tag == RMPI_SEND_TAG) {
           res = sr_iter->loc;
@@ -641,6 +652,7 @@ int generic_tape(short tag,
         }
         sr_iter++;
         break;
+#endif
       default:
         fprintf(DIAG_OUT, "GENERIC-TENSOR: unimplemented opcode %d\n", opcode);
     }

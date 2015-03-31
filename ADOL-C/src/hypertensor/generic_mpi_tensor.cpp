@@ -6,13 +6,16 @@
 
 #include <adolc/adolc.h>
 #include <adolc/hypertensor/generic_tape.h>
-#include <adolc/hypertensor/opencomb.h>
+#include <adolc/hypertensor/opencomb_multi_set.h>
 #include <adolc/hypertensor/generic_derivative_table.h>
 #include <adolc/hypertensor/generic_mpi_reverse.h>
+
+#ifdef ENABLE_GENERIC_MPI
 #include <sys/time.h>
 #include "mpi.h"
-
 #define DEBUG_ID 99
+
+#endif
 
 int generic_mpi_tensor(short tag,
                        int dep,
@@ -22,8 +25,11 @@ int generic_mpi_tensor(short tag,
                        int** nnz_p,
                        unsigned int**** indices_p,
                        double*** values_p) {
+
+#ifdef ENABLE_GENERIC_MPI
   int myid;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+#endif
 
   std::vector<locint> hyper_index;
   std::vector<double> hyper_value;
@@ -31,27 +37,34 @@ int generic_mpi_tensor(short tag,
   std::map<locint, locint> dep_map;
   std::map<locint, std::set<locint> > r_live_set;
   std::map<locint, GenericDerivative<locint> > generic_derivative;
-  std::cout << "In generic_mpi_tensor" << std::endl;
+//  std::cout << "In generic_mpi_tensor" << std::endl;
 
   generic_tape(tag, dep, indep, basepoint,
                ind_map, dep_map, hyper_index, hyper_value);
 
+/*
   if (myid == DEBUG_ID) {
     std::cout << hyper_index.size() << std::endl;
     for(const locint& loc : hyper_index) {
       std::cout << loc << std::endl;
     }
   }
-
+*/
   struct timeval tv1, tv2;
   double time_elapsed;
+#ifdef ENABLE_GENERIC_MPI
   gettimeofday(&tv1, NULL);
+#endif
+
   special_derivative_table();
   generic_mpi_reverse(tag, order, hyper_index, hyper_value, r_live_set, generic_derivative);
+
+#ifdef ENABLE_GENERIC_MPI
   gettimeofday(&tv2, NULL);
   time_elapsed = (tv2.tv_sec - tv1.tv_sec) +
                  (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
   std::cout << "Proc "<<myid<<" reverse time: "<<time_elapsed << std::endl;  
+#endif
   std::map<locint, GenericDerivative<locint> >::iterator iter;
   iter = generic_derivative.begin();
 
@@ -64,14 +77,14 @@ int generic_mpi_tensor(short tag,
     }
 //  }
 */
-
+#ifdef ENABLE_GENERIC_MPI
   gettimeofday(&tv1, NULL);
   generic_mpi_forward(order, r_live_set, generic_derivative);
   gettimeofday(&tv2, NULL);
   time_elapsed = (tv2.tv_sec - tv1.tv_sec) +
                  (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
   std::cout << "Proc "<<myid<<" forward time: "<<time_elapsed << std::endl;  
-
+#endif
 /*
   iter = generic_derivative.begin();
   if (myid == 0) {
@@ -99,7 +112,7 @@ int generic_mpi_tensor(short tag,
   iter = generic_derivative.begin();
   while(iter != generic_derivative.end()) {
     locint dummy_dep = dep_map[iter->first];
-    std::cout << "index="<<iter->first << "dep="<< dummy_dep << std::endl;
+//    std::cout << "index = "<<iter->first << "dep = "<< dummy_dep << std::endl;
     int count = iter->second.get_size_for_order(order);
     nnz[dummy_dep] = count;
     indices[dummy_dep] = (unsigned int**)malloc(sizeof(unsigned int*) * count);

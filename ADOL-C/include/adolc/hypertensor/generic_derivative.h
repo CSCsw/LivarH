@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 
-#include "opencomb.h"
+#include "opencomb_multi_set.h"
 
 template <typename T>
 class GenericDerivative {

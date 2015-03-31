@@ -11,17 +11,23 @@
 #include <adolc/hypertensor/generic_derivative_table.h>
 #include <adolc/hypertensor/generic_mpi_trace.h>
 #include <adolc/hypertensor/generic_reverse.h>
-#include <adolc/hypertensor/opencomb.h>
+#include <adolc/hypertensor/opencomb_multi_set.h>
+
+#ifdef ENABLE_GENERIC_MPI
+
 #include <sys/time.h>
 #include "mpi.h"
+#define DEBUG_ID 99
+extern std::vector<SRinfo> sr_stack;
+
+#endif
 
 #define GET_LAST_INDEX hyper_index.back(); hyper_index.pop_back();
 #define GET_LAST_VALUE hyper_value.back(); hyper_value.pop_back();
 #define POP_LAST_VALUE(n) for(int i = 0; i < n; ++i) {hyper_value.pop_back();}
 
-#define DEBUG_ID 99
 
-extern std::vector<SRinfo> sr_stack;
+
 
 void generic_mpi_process_sac(int order,
                              DerivativeInfo<locint>& info,
@@ -56,8 +62,10 @@ int generic_mpi_reverse(short tag,
   double* d = NULL;
   int i;
   double r, x, y;
+#ifdef ENABLE_GENERIC_MPI
   std::vector<SRinfo>::reverse_iterator sr_riter;
   sr_riter = sr_stack.rbegin();
+#endif
   init_rev_sweep(tag);
   opcode = get_op_r();
   while(opcode != start_of_tape) {
@@ -421,6 +429,7 @@ int generic_mpi_reverse(short tag,
         populate_derivative_table(order, info, local_gd);
         break;
 #endif // ATRIG_ERF
+#ifdef ENABLE_GENERIC_MPI
       case ampi_send:
         if (sr_riter->SR_tag == RMPI_SEND_TAG) {
         } else {
@@ -444,6 +453,7 @@ int generic_mpi_reverse(short tag,
         }
         ++sr_riter;
         break;
+#endif
       default:
         fprintf(DIAG_OUT, "HYPER-TENSOR: unimplemented opcode %d\n", opcode);
     }
@@ -500,21 +510,7 @@ void generic_mpi_process_sac(int order,
   }
 }
 
-void print_live_set(std::set<locint>& live_set) {
-
-  int myid;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-if (myid == DEBUG_ID) {
-  typename std::set<locint>::iterator iter;
-  iter = live_set.begin();
-  std::cout << "SET: <";
-  while(iter != live_set.end()) {
-    std::cout << " " << *iter;
-    ++iter;
-  }
-  std::cout << ">" << std::endl;
-}
-}
+#ifdef ENABLE_GENERIC_MPI
 
 double symmetric_coeff(
     double w,
@@ -654,7 +650,6 @@ void generic_tuples(int order,
                     GenericDerivative<locint>& local_gd,
                     GenericDerivative<locint>& temp_gd) {
 //populare live set
-//  print_live_set(live_set);
   typename GenericDerivative<locint>::iterator local_iter;
   local_iter = local_gd.get_new_iterator();
   bool local_has_next = local_iter.init_iterator();
@@ -670,18 +665,7 @@ void generic_tuples(int order,
     }
     local_has_next = local_iter.move_to_next();
   }
-//  print_live_set(live_set);
 
-
-  int myid;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-  if (myid == DEBUG_ID) {
-    std::cout << "debug info" << std::endl;
-    temp_gd.debug();
-    std::cout << std::endl << "local:";
-    local_gd.debug();
-    std::cout << std::endl;
-  }
 // compute derivatives
   typename GenericDerivative<locint>::iterator temp_iter;
   temp_iter = temp_gd.get_new_iterator();
@@ -788,9 +772,6 @@ void generic_mpi_process_recv_gd(
   locint dummy_dep;
   GenericDerivative<locint> temp_gd(order);
 
-  int myid;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
   if (generic_is_linear(recv_gd)) {
 // For linear derivatives, we have a more efficient method
 //    std::cout << " res = " << res << " is linear : ";
@@ -871,3 +852,5 @@ void generic_mpi_forward(int order,
     }
   }
 }
+
+#endif // ENABLE_GENERIC_MPI

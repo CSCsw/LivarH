@@ -1,9 +1,11 @@
 #include "taping_p.h"
 #include "oplate.h"
 #include <adolc/adolc.h>
+
+#ifdef ENABLE_GENERIC_MPI
+
 #include <mpi.h>
 #include <adolc/hypertensor/generic_mpi_trace.h>
-
 MPI_Datatype RMPI_ADOUBLE;
 
 std::vector<double> dummy_ind_vec;
@@ -12,7 +14,6 @@ std::vector<double> dummy_ind_vec;
 
 static adouble* dummy_reverse;
 static int dummy_reverse_size = 0;
-
 
 static adouble* get_dummy(int count) {
 //  std::cout << "In get dummy, count = " << count << std::endl;
@@ -34,6 +35,7 @@ void RMPI_Init(int* argc, char** argv[]) {
   dummy_ind_vec.clear();
   dummy_reverse = new adouble[MAX_DUMMY_SIZE];
   dummy_reverse_size = 0;
+  std::cout << "Generic MPI support not enabled!" << std::endl;
 }
 
 void RMPI_Finalize() {
@@ -59,7 +61,7 @@ int RMPI_Send(void* buf,
               int dest,
               int tag,
               MPI_Comm comm) {
-  int rc;
+  int rc = 0;
 //  std::cout << "In RMPI_Send:" << std::endl;
   if (datatype == RMPI_ADOUBLE) {
     void* send_buf;
@@ -95,7 +97,7 @@ int RMPI_Recv(void* buf,
               int tag,
               MPI_Comm comm,
               MPI_Status* status) {
-  int rc;
+  int rc = 0;
 //  std::cout << "In Recv:" << std::endl;
   if (datatype == RMPI_ADOUBLE) {
     adouble* adouble_p = (adouble*)buf;
@@ -125,3 +127,5 @@ int RMPI_Recv(void* buf,
   }
   return rc;
 }
+
+#endif // ENABLE_GENERIC_MPI

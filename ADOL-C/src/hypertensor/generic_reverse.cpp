@@ -10,7 +10,7 @@
 #include <adolc/hypertensor/generic_derivative.h>
 #include <adolc/hypertensor/generic_derivative_table.h>
 #include <adolc/hypertensor/generic_reverse.h>
-#include <adolc/hypertensor/opencomb.h>
+#include <adolc/hypertensor/opencomb_multi_set.h>
 #include <sys/time.h>
 
 #define DEBUG_ID 99
@@ -614,9 +614,6 @@ void generic_d_tuples(int order,
                       GenericDerivative<locint>& local_gd,
                       GenericDerivative<locint>& temp_gd) {
 /*
-//  int myid;
-//  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-//if (myid == DEBUG_ID) {
   std::cout << "global: " << std::endl;
   global_gd.debug();
   std::cout << std::endl;
@@ -628,7 +625,6 @@ void generic_d_tuples(int order,
   std::cout << "temp: " << std::endl;
   temp_gd.debug();
   std::cout << std::endl;
-//}
 */
   typename GenericDerivative<locint>::iterator local_iter;
   local_iter = local_gd.get_new_iterator();

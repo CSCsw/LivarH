@@ -12,7 +12,10 @@ int generic_mpi_reverse(short tag,
                         std::map<locint, std::set<locint> >& live_set,
                         std::map<locint, GenericDerivative<locint> >& generic_derivative);
 
+#ifdef ENABLE_GENERIC_MPI
+
 int generic_mpi_forward(int order,
                         std::map<locint, std::set<locint> >& live_set,
                         std::map<locint, GenericDerivative<locint> >& generic_derivative);
+#endif // ENABLE_GENERIC_MPI
 #endif // GENERIC_MPI_REVERSE_H_
