@@ -33,7 +33,7 @@ extern std::vector<double> dummy_ind_vec;
 #define TRANSLATE_ARG(arg) (index_translate[arg])
 #define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
 #define TRANSLATE_IND(ind) TRANSLATE_RES(ind)
-#define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
+#define TRANSLATE_DEP(dep) TRANSLATE_RES(dep)
 static locint translate_result(std::map<locint, locint>& index_translate,
                                locint& max_ind,
                                locint res) {
@@ -53,7 +53,6 @@ extern std::vector<double> dummy_ind_vec;
 
 #define TRANSLATE_ARG(arg) (index_translate[arg])
 #define TRANSLATE_RES(res) (translate_result(index_translate, max_ind, res))
-#define TRANSLATE_IND(ind) (translate_ind(index_translate, index_ind, ind))
 #define TRANSLATE_DEP(dep) TRANSLATE_ARG(dep)
 static locint translate_result(std::map<locint, locint>& index_translate,
                                locint& max_ind,
@@ -207,7 +206,7 @@ int generic_tape(short tag,
         res = get_locint_f();
         index_dep--;
         dep_map[TRANSLATE_DEP(res)] = index_dep;
-        hyper_index.push_back(TRANSLATE_DEP(res));
+        hyper_index.push_back(TRANSLATE_ARG(res));
         hyper_value.push_back(dp_T0[res]);
 //        std::cout << res << " D--> " << hyper_index.back() << std::endl;
         break;

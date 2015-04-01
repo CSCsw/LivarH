@@ -347,6 +347,7 @@ void hyper_process_recv_gd(
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 #endif
   IF_MY_DEBUG
+  std::cout << "dep = " << dep << std::endl;
   std::cout << "local_gd :" << std::endl;
   local_gd.debug();
   std::cout << "---------" << std::endl;

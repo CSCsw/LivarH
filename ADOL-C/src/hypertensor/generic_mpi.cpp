@@ -35,7 +35,6 @@ void RMPI_Init(int* argc, char** argv[]) {
   dummy_ind_vec.clear();
   dummy_reverse = new adouble[MAX_DUMMY_SIZE];
   dummy_reverse_size = 0;
-  std::cout << "Generic MPI support not enabled!" << std::endl;
 }
 
 void RMPI_Finalize() {

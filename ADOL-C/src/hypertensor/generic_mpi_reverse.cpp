@@ -841,7 +841,7 @@ void generic_mpi_forward(int order,
                sr_info.tag, sr_info.comm, MPI_STATUS_IGNORE);
       total_buf_size = 0;
       for(int i = 0; i < sr_info.count; i++) {
-        loc = sr_info.loc + i;
+        loc = sr_info.loc - i;
         GenericDerivative<locint> recv_gd(&(buf[total_buf_size]), buf_size);
         total_buf_size += buf_size;
 //        recv_gd.debug();

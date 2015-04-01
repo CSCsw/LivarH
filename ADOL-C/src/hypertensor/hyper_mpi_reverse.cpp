@@ -616,7 +616,7 @@ void hyper_mpi_forward(std::map<locint, HyperDerivative<locint> >& global_gd) {
                sr_info.tag, sr_info.comm, MPI_STATUS_IGNORE);
       total_buf_size = 0;
       for(int i = 0; i < sr_info.count; i++) {
-        loc = sr_info.loc + i;
+        loc = sr_info.loc - i;
         HyperDerivative<locint> recv_gd(&(buf[total_buf_size]));
         total_buf_size += recv_gd.byte_size();
 //        recv_gd.debug();      
