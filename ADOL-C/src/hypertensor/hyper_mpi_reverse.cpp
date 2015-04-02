@@ -38,9 +38,10 @@ extern std::vector<SRinfo> sr_stack;
 #define PSEUDO_BINARY_3 if (info.y == info.x) {info.y = NULLLOC; COMBINE_D_3;}
 
 int hyper_mpi_reverse(short tag,
-                        std::vector<locint>& hyper_index,
-                        std::vector<double>& hyper_value,
-                        std::map<locint, HyperDerivative<locint> >& global_gd) {
+                      int order,
+                      std::vector<locint>& hyper_index,
+                      std::vector<double>& hyper_value,
+                      std::map<locint, HyperDerivative<locint> >& global_gd) {
   ADOLC_OPENMP_THREAD_NUMBER;
   ADOLC_OPENMP_GET_THREAD_NUMBER;
   std::cout << "In hyper_third_reverse " << std::endl;
@@ -104,7 +105,7 @@ int hyper_mpi_reverse(short tag,
       case assign_dep:
         res = GET_LAST_INDEX;
         GET_LAST_VALUE;
-        global_gd[res].init();
+        global_gd[res].init(order);
         global_gd[res].adjoints->increase(res, 1.0);
         reverse_live[res].insert(res); 
 //        std::cout << "Dep: " << res << std::endl;
@@ -240,7 +241,7 @@ int hyper_mpi_reverse(short tag,
           iter = dep_set.begin();
           while(iter != dep_set.end()) {
             dep = *iter;
-            hyper_process_sac(info, global_gd[dep]);
+            hyper_process_sac(info, order, global_gd[dep]);
             if (info.x != NULLLOC) {
               reverse_live[info.x].insert(dep);
             }
@@ -276,7 +277,7 @@ int hyper_mpi_reverse(short tag,
           iter = dep_set.begin();
           while(iter != dep_set.end()) {
             dep = *iter;
-            hyper_process_sac(info, global_gd[dep]);
+            hyper_process_sac(info, order, global_gd[dep]);
             if (info.x != NULLLOC) {
               reverse_live[info.x].insert(dep);
             }
@@ -563,7 +564,7 @@ int hyper_mpi_reverse(short tag,
       iter = dep_set.begin();
       while(iter != dep_set.end()) {
         dep = *iter;
-        hyper_process_sac(info, global_gd[dep]);
+        hyper_process_sac(info, order, global_gd[dep]);
 //        global_gd[dep].debug();
         if (info.x != NULLLOC) {
           reverse_live[info.x].insert(dep);
@@ -579,7 +580,8 @@ int hyper_mpi_reverse(short tag,
   end_sweep();
 }
 
-void hyper_mpi_forward(std::map<locint, HyperDerivative<locint> >& global_gd) {
+void hyper_mpi_forward(int order,
+                       std::map<locint, HyperDerivative<locint> >& global_gd) {
 #ifdef ENABLE_GENERIC_MPI
   int myid;
   locint loc;
@@ -617,10 +619,10 @@ void hyper_mpi_forward(std::map<locint, HyperDerivative<locint> >& global_gd) {
       total_buf_size = 0;
       for(int i = 0; i < sr_info.count; i++) {
         loc = sr_info.loc - i;
-        HyperDerivative<locint> recv_gd(&(buf[total_buf_size]));
+        HyperDerivative<locint> recv_gd(&(buf[total_buf_size]), order);
         total_buf_size += recv_gd.byte_size();
 //        recv_gd.debug();      
-        hyper_process_recv_gd(loc, recv_gd, global_gd);
+        hyper_process_recv_gd(loc, order, recv_gd, global_gd);
       }
       free(buf);
     }

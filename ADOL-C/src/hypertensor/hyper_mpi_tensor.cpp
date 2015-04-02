@@ -44,7 +44,7 @@ int hyper_mpi_tensor(short tag,
   struct timeval tv1, tv2;
   double time_elapsed;
   gettimeofday(&tv1, NULL);
-  hyper_mpi_reverse(tag, hyper_index, hyper_value, global_gd);
+  hyper_mpi_reverse(tag, order, hyper_index, hyper_value, global_gd);
   gettimeofday(&tv2, NULL);
   time_elapsed = (tv2.tv_sec - tv1.tv_sec) +
                  (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
@@ -62,7 +62,7 @@ int hyper_mpi_tensor(short tag,
 */
 #ifdef ENABLE_GENERIC_MPI
   gettimeofday(&tv1, NULL);
-  hyper_mpi_forward(global_gd);
+  hyper_mpi_forward(order, global_gd);
   gettimeofday(&tv2, NULL);
   time_elapsed = (tv2.tv_sec - tv1.tv_sec) +
                  (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
@@ -94,24 +94,45 @@ int hyper_mpi_tensor(short tag,
   iter = global_gd.begin();
   while(iter != global_gd.end()) {
     locint dummy_dep = dep_map[iter->first];
+    iter->second.debug();
 //    std::cout << "index = "<<iter->first << "dep = "<< dummy_dep << std::endl;
-    int count = iter->second.hessian->get_size();
+    int count = 0;
+    if (order == 2) {
+      count = iter->second.hessian->get_size();
+    } else if (order == 3) {
+      count = iter->second.tensor->get_size();
+    }
     nnz[dummy_dep] = count;
     indices[dummy_dep] = (unsigned int**)malloc(sizeof(unsigned int*) * count);
     values[dummy_dep] = (double*)malloc(sizeof(double*) * count);
     count = 0;
-    typename MatrixGraph<locint>::iterator* h_iter =
-        iter->second.hessian->get_iterator();
-    bool has_next = h_iter->reset();
-    locint x, y;
-    double w;
-    while(has_next) {
-      has_next = h_iter->get_next(x, y, w);
-      indices[dummy_dep][count] = (unsigned int*)malloc(sizeof(unsigned int) * order);
-      indices[dummy_dep][count][0] = ind_map[x];
-      indices[dummy_dep][count][1] = ind_map[y];
-      values[dummy_dep][count] = w;
-      ++count;
+    if (order == 2) {
+      typename MatrixGraph<locint>::iterator* h_iter =
+          iter->second.hessian->get_iterator();
+      bool has_next = h_iter->reset();
+      locint x, y;
+      double w;
+      while(has_next) {
+        has_next = h_iter->get_next(x, y, w);
+        indices[dummy_dep][count] = (unsigned int*)malloc(sizeof(unsigned int) * order);
+        indices[dummy_dep][count][0] = ind_map[x];
+        indices[dummy_dep][count][1] = ind_map[y];
+        values[dummy_dep][count] = w;
+        ++count;
+      }
+    } else if (order == 3) {
+      bool has_next = iter->second.tensor->reset();
+      locint x, y, z;
+      double w;
+      while(has_next) {
+        has_next = iter->second.tensor->get_next(x, y, z, w);
+        indices[dummy_dep][count] = (unsigned int*)malloc(sizeof(unsigned int) * order);
+        indices[dummy_dep][count][0] = ind_map[x];
+        indices[dummy_dep][count][1] = ind_map[y];
+        indices[dummy_dep][count][2] = ind_map[z];
+        values[dummy_dep][count] = w;
+        ++count;
+      }
     }
     ++iter;
   }

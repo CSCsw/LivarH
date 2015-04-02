@@ -12,10 +12,13 @@ template <typename T>
 class HyperGraphMap : public HyperGraph<T> {
  public:
   HyperGraphMap();
+  HyperGraphMap(char* buf);
   ~HyperGraphMap();
   void increase(T x, T y, T z, double v);
   MatrixGraph<T>* get_and_erase(T x);
   MatrixGraph<T>* get(T x);
+  int byte_size();
+  void write_to_byte(char* buf);
   bool reset();
   bool get_next(T& x, T& y, T& z, double& w);
   int get_size();
@@ -26,6 +29,7 @@ class HyperGraphMap : public HyperGraph<T> {
   typename std::map<T, std::map<T, double> >::iterator iter2;
   typename std::map<T, double>::iterator iter3;
 };
+
 template <typename T>
 HyperGraphMap<T>::HyperGraphMap() {
   data.clear();
@@ -34,6 +38,61 @@ HyperGraphMap<T>::HyperGraphMap() {
 template <typename T>
 HyperGraphMap<T>::~HyperGraphMap() {
   data.clear();
+}
+
+template <typename T>
+HyperGraphMap<T>::HyperGraphMap(char* buf) {
+  char* p = buf;
+  int size = *((int*)p);
+  p += sizeof(int);
+  T x,y,z;
+  double w;
+  for(int i = 0; i < size; i++) {
+    x = *((T*)p);
+    p += sizeof(T);
+    y = *((T*)p);
+    p += sizeof(T);
+    z = *((T*)p);
+    p += sizeof(T);
+    w = *((double*)p);
+    p += sizeof(w);
+    data[x][y][z] = w;
+  }  
+}
+
+template <typename T>
+int HyperGraphMap<T>::byte_size() {
+  return get_size() * (sizeof(T)*3+sizeof(double)) + sizeof(int);
+}
+
+template <typename T>
+void HyperGraphMap<T>::write_to_byte(char* buf) {
+  char* p = buf;
+  *((int*)p) = get_size();
+  p += sizeof(int);
+  typename std::map<T, std::map<T, std::map<T, double> > >::const_iterator t_iter;
+  typename std::map<T, std::map<T, double> >::const_iterator m_iter;
+  typename std::map<T, double>::const_iterator v_iter;
+  t_iter = data.begin();
+  while(t_iter != data.end()) {
+    m_iter = t_iter->second.begin();
+    while(m_iter != t_iter->second.end()) {
+      v_iter = m_iter->second.begin();
+      while(v_iter != m_iter->second.end()) {
+        *((T*)p) = t_iter->first;
+        p += sizeof(T);
+        *((T*)p) = m_iter->first;
+        p += sizeof(T);
+        *((T*)p) = v_iter->first;
+        p += sizeof(T);
+        *((double*)p) = v_iter->second;
+        p += sizeof(double);
+        ++v_iter;
+      }
+      ++m_iter;
+    }
+    ++t_iter;
+  }  
 }
 
 template <typename T>

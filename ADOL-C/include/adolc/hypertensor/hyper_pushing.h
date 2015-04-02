@@ -27,9 +27,11 @@ void hyper_adjoints(DerivativeInfo<locint>& info,
                    double w);
 
 void hyper_process_sac(DerivativeInfo<locint>& info,
-                      HyperDerivative<locint>& global_gd);
+                       int order,
+                       HyperDerivative<locint>& global_gd);
 
 void hyper_process_recv_gd(locint dep,
+                           int order,
                            HyperDerivative<locint>& local_gd,
                            std::map<locint, HyperDerivative<locint> >& global_gd);
 
