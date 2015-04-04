@@ -94,7 +94,7 @@ int hyper_mpi_tensor(short tag,
   iter = global_gd.begin();
   while(iter != global_gd.end()) {
     locint dummy_dep = dep_map[iter->first];
-    iter->second.debug();
+//    iter->second.debug();
 //    std::cout << "index = "<<iter->first << "dep = "<< dummy_dep << std::endl;
     int count = 0;
     if (order == 2) {

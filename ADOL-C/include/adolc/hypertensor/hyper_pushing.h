@@ -35,4 +35,10 @@ void hyper_process_recv_gd(locint dep,
                            HyperDerivative<locint>& local_gd,
                            std::map<locint, HyperDerivative<locint> >& global_gd);
 
+void hyper_process_recv_ind(locint toind,
+                            locint fromind,
+                            int count,
+                            int order,
+                            std::map<locint, HyperDerivative<locint> >& global_gd);
+
 #endif // HYPER_PUSHING_H_

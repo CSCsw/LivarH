@@ -523,14 +523,16 @@ int hyper_mpi_reverse(short tag,
 #endif // ATRIG_ERF
 #ifdef ENABLE_GENERIC_MPI
       case ampi_send:
-        if (sr_riter->SR_tag == RMPI_SEND_TAG) {
+        if (sr_riter->SR_tag == RMPI_SEND_TAG ||
+            sr_riter->SR_tag == RMPI_SEND_IND_TAG) {
         } else {
           std::cout << "HYPER MPI reverse trace Send ERROR!" << std::endl;
         }
         ++sr_riter;
         break;
       case ampi_recv:
-        if (sr_riter->SR_tag == RMPI_RECV_TAG) {
+        if (sr_riter->SR_tag == RMPI_RECV_TAG ||
+            sr_riter->SR_tag == RMPI_RECV_IND_TAG) {
           for(int i = 0; i < sr_riter->count; i++) {
             opcode = get_op_r();
             if (opcode == assign_ind) {
@@ -607,7 +609,7 @@ void hyper_mpi_forward(int order,
                sr_info.tag, sr_info.comm);
 //      std::cout << myid << " send size " << total_buf_size << std::endl;
       free(buf);
-    } else {
+    } else if(sr_info.SR_tag == RMPI_RECV_TAG) {
       int total_buf_size = 0;
       int buf_size;
       MPI_Recv(&total_buf_size, 1, MPI_INT, sr_info.peer, sr_info.tag,
@@ -625,6 +627,16 @@ void hyper_mpi_forward(int order,
         hyper_process_recv_gd(loc, order, recv_gd, global_gd);
       }
       free(buf);
+    } else if (sr_info.SR_tag == RMPI_SEND_IND_TAG) {
+      loc = sr_info.loc;
+      std::cout << myid << " send ind : " << loc << std::endl;
+      MPI_Send(&loc, 1, MPI_UNSIGNED, sr_info.peer, sr_info.tag, sr_info.comm);
+    } else if (sr_info.SR_tag == RMPI_RECV_IND_TAG) {
+      MPI_Recv(&loc, 1, MPI_UNSIGNED, sr_info.peer, sr_info.tag,
+               sr_info.comm, MPI_STATUS_IGNORE);
+      std::cout << myid << " recv ind : " << loc 
+                << " --> " << sr_info.loc << std::endl;
+      hyper_process_recv_ind(loc, sr_info.loc, sr_info.count, order, global_gd);
     }
   }
 #endif

@@ -22,6 +22,7 @@ class HyperDerivative {
   int byte_size();
   void write_to_byte(char* buf);
   void debug();
+  void ind_map(T toind, T fromind, int count);
 
   VectorGraph<T>* adjoints;
   MatrixGraph<T>* hessian;
@@ -39,7 +40,7 @@ template <typename T>
 HyperDerivative<T>::~HyperDerivative() {
   delete adjoints;
   delete hessian;
-  delete tensor;
+  if (tensor != NULL) {delete tensor;}
 }
 
 template <typename T>
@@ -68,6 +69,8 @@ HyperDerivative<T>::HyperDerivative(char* buf, int order) {
   if (order >= 3) {
     p += hessian->byte_size();
     tensor = new HyperGraphMap<T>(p);
+  } else {
+    tensor = NULL;
   }
 }
 
@@ -84,6 +87,51 @@ template <typename T>
 void HyperDerivative<T>::debug() {
   if (adjoints != NULL) adjoints->debug();
   if (hessian != NULL) hessian->debug();
-  if (tensor != NULL) tensor->debug();
+//  if (tensor != NULL) tensor->debug();
 }
+
+template <typename T>
+void HyperDerivative<T>::ind_map(T toind, T fromind, int count) {
+  VectorGraph<T>* t_adjoints = adjoints;
+  adjoints = new VectorGraphMap<T>();
+  T x,y;
+  double w;
+  typename VectorGraph<T>::iterator* v_iter = t_adjoints->get_iterator();
+  bool has_next = v_iter->reset();
+  while(has_next) {
+    has_next = v_iter->get_next(x, w);
+    if (x > fromind - count && x <= fromind) {
+      x = toind + (fromind - x);
+    }
+    adjoints->increase(x, w);
+  }
+  delete v_iter;
+
+  MatrixGraph<T>* t_hessian = hessian;
+  hessian = new MatrixGraphMap<T>();
+  typename MatrixGraph<T>::iterator* h_iter = t_hessian->get_iterator();
+  has_next = h_iter->reset();
+  while(has_next) {
+    has_next = h_iter->get_next(x, y, w);
+    if (x > fromind - count && x <= fromind) {
+      x = toind + (fromind - x);
+    }
+    if (y > fromind - count && y <= fromind) {
+      y = toind + (fromind - y);
+    }
+    hessian->increase(x, y, w);
+  }
+  delete h_iter;
+  delete t_adjoints;
+  delete t_hessian;
+/*
+  std::cout << fromind << " --> " << toind << "[" << count << "]" << std::endl;
+  t_adjoints->debug();
+  t_hessian->debug();
+  adjoints->debug();
+  hessian->debug();
+*/
+}
+
+
 #endif // HYPER_DERIVATIVE_H_

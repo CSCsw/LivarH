@@ -459,6 +459,7 @@ void hyper_process_gd(locint dep,
     MatrixGraph<locint>* e = global_gd.tensor->get_and_erase(dep);
     hyper_third_gd(dep, local_gd.adjoints, local_gd.hessian, local_gd.tensor,
                    w, r, e, global_gd.tensor);
+    delete e;
   }
   // Hessian
   hyper_hessian_gd(dep, local_gd.adjoints, local_gd.hessian,
@@ -466,11 +467,6 @@ void hyper_process_gd(locint dep,
   // Adjoints
   hyper_adjoints_gd(local_gd.adjoints, global_gd.adjoints, w);
   delete r;
-#ifdef ENABLE_GENERIC_MPI
-  if (myid == DEBUG_ID) {
-    global_gd.debug();
-  }
-#endif
 }
 
 void hyper_process_recv_gd(
@@ -496,6 +492,19 @@ void hyper_process_recv_gd(
     if (global_gd[loc].adjoints->has_live(dep)) {
       hyper_process_gd(dep, order, local_gd, global_gd[loc]);
     }
+    ++t_iter;
+  }
+}
+
+void hyper_process_recv_ind(locint toind,
+                            locint fromind,
+                            int count,
+                            int order,
+                            std::map<locint, HyperDerivative<locint> >& global_gd) {
+  std::map<locint, HyperDerivative<locint> >::iterator t_iter;
+  t_iter = global_gd.begin();
+  while(t_iter != global_gd.end()) {
+    t_iter->second.ind_map(toind, fromind, count);
     ++t_iter;
   }
 }

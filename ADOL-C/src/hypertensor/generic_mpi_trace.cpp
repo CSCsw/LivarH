@@ -21,9 +21,3 @@ void put_mpi_trace(int sr_tag,
   sr_stack.push_back(sr_info);
 }
 
-/*
-void get_mpi_trace(SRInfo& sr_info) {
-  sr_info = sr_stack.back();
-  sr_stack.pop_back();
-}
-*/

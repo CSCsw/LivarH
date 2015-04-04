@@ -6,6 +6,8 @@
 
 #define RMPI_SEND_TAG 0
 #define RMPI_RECV_TAG 1
+#define RMPI_SEND_IND_TAG 2
+#define RMPI_RECV_IND_TAG 3
 
 class SRinfo {
  public:

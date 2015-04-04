@@ -682,7 +682,8 @@ int generic_tape(short tag,
         break;
 #ifdef ENABLE_GENERIC_MPI
       case ampi_send:
-        if (sr_iter->SR_tag == RMPI_SEND_TAG) {
+        if (sr_iter->SR_tag == RMPI_SEND_TAG ||
+            sr_iter->SR_tag == RMPI_SEND_IND_TAG) {
           res = sr_iter->loc;
           sr_iter->loc = TRANSLATE_ARG(res); 
         } else {
@@ -691,7 +692,8 @@ int generic_tape(short tag,
         sr_iter++;  
         break;
       case ampi_recv:
-        if (sr_iter->SR_tag == RMPI_RECV_TAG) {
+        if (sr_iter->SR_tag == RMPI_RECV_TAG ||
+            sr_iter->SR_tag == RMPI_RECV_IND_TAG) {
           res = sr_iter->loc;
           sr_iter->loc = TRANSLATE_ARG(res); 
         } else {
