@@ -25,24 +25,30 @@ int hyper_mpi_tensor(short tag,
                     int** nnz_p,
                     unsigned int**** indices_p,
                     double*** values_p) {
-  std::map<locint, HyperDerivative<locint> > global_gd;
-  std::vector<locint> hyper_index;
-  std::vector<double> hyper_value;
-  std::map<locint, locint> ind_map;
-  std::map<locint, locint> dep_map;
-  std::cout << "In hyper_mpi_tensor" << std::endl;
-//  hyper_tape(tag, ndep, nindep, basepoint, ind_map, hyper_index, hyper_value);
-  generic_tape(tag, ndep, nindep, basepoint,
-               ind_map, dep_map, hyper_index, hyper_value);
-//  for(const locint& x: hyper_index) {
-//    std::cout << x << std::endl;
-//  }
   int myid = 0;
 #ifdef ENABLE_GENERIC_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 #endif
   struct timeval tv1, tv2;
   double time_elapsed;
+
+std::map<locint, HyperDerivative<locint> > global_gd;
+  std::vector<locint> hyper_index;
+  std::vector<double> hyper_value;
+  std::map<locint, locint> ind_map;
+  std::map<locint, locint> dep_map;
+  std::cout << "In hyper_mpi_tensor" << std::endl;
+  gettimeofday(&tv1, NULL);
+  generic_tape(tag, ndep, nindep, basepoint,
+               ind_map, dep_map, hyper_index, hyper_value);
+  gettimeofday(&tv2, NULL);
+  time_elapsed = (tv2.tv_sec - tv1.tv_sec) +
+                 (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
+  std::cout<<"Proc "<<myid<<" tape time: "<<time_elapsed<<std::endl;
+//  for(const locint& x: hyper_index) {
+//    std::cout << x << std::endl;
+//  }
+
   gettimeofday(&tv1, NULL);
   hyper_mpi_reverse(tag, order, hyper_index, hyper_value, global_gd);
   gettimeofday(&tv2, NULL);
@@ -86,7 +92,7 @@ int hyper_mpi_tensor(short tag,
     return 0;
   }
 
-
+  gettimeofday(&tv1, NULL);
   int* nnz = (int*)malloc(sizeof(int) * num_dep);
   unsigned int*** indices = (unsigned int***)(malloc(sizeof(unsigned int**)*num_dep));
   double** values = (double**)malloc(sizeof(double*)*num_dep);
@@ -139,4 +145,10 @@ int hyper_mpi_tensor(short tag,
   *nnz_p = nnz;
   *indices_p = indices;
   *values_p = values;
+  gettimeofday(&tv2, NULL);
+  time_elapsed = (tv2.tv_sec - tv1.tv_sec) +
+                 (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
+  if (myid == 0) {
+    std::cout<<"Proc "<<myid<<" result time: "<<time_elapsed<<std::endl;
+  }
 }
