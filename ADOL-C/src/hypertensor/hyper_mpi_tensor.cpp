@@ -80,7 +80,7 @@ int hyper_mpi_tensor(short tag,
   int num_dep = global_gd.size();
   if (num_dep != ndep) {
     std::cout << "Hyper Tensor: Dependent check error! "
-              << "Expected: " << dep << " Actural: " << num_dep << std::endl;
+              << "Expected: " << ndep << " Actural: " << num_dep << std::endl;
   }
   if (num_dep == 0) {
     return 0;

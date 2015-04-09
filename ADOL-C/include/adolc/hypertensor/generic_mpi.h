@@ -39,4 +39,12 @@ int RMPI_Recv_ind(void* buf,
               MPI_Comm comm,
               MPI_Status* status);
 
+int RMPI_Reduce(void *sendbuf,
+                void *recvbuf,
+                int count,
+                MPI_Datatype datatype,
+                MPI_Op op,
+                int root,
+                MPI_Comm comm);
+
 #endif // GENERIC_MPI_H_

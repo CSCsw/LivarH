@@ -199,4 +199,67 @@ int RMPI_Recv(void* buf,
   return rc;
 }
 
+//for simplicity, we assume root = 0;
+int RMPI_Reduce(void* sendbuf,
+                void* recvbuf,
+                int count,
+                MPI_Datatype datatype,
+                MPI_Op op,
+                int root,
+                MPI_Comm comm) {
+  int rc = 0;
+  if (datatype == RMPI_ADOUBLE) {
+    adouble* t_buf = new adouble[count];
+    adouble* s_buf = (adouble*)sendbuf;
+    int size;
+    int myid;
+    MPI_Comm_size(comm, &size);
+    MPI_Comm_rank(comm, &myid);
+//    std::cout << myid << "in reduction" << std::endl;
+    int d = 0;
+    int p = 1;
+    int mask;
+    int peer;
+    while(p < size) {
+      mask = p - 1;
+//      std::cout << myid << " mask : " << mask << std::endl;
+      if ((myid & mask) == 0) {
+        peer = myid ^ p;
+//        std::cout << myid << " peer : " << peer << std::endl;
+        if (peer < size) {
+          if ((myid & p) == 0) {
+            // recv from peer
+//            std::cout << myid << "recv from : " << peer << std::endl;
+            RMPI_Recv((void*)t_buf, count, RMPI_ADOUBLE, peer, 0, comm, MPI_STATUS_IGNORE);
+            for(int i = 0; i < count; i++) {
+              if (op == MPI_SUM) {
+                s_buf[i] += t_buf[i];
+              } else if(op == MPI_PROD) {
+                s_buf[i] *= t_buf[i];
+              } else {
+                std::cout<<"Unsupported operator in RMPI_Reduce!" << std::endl;
+              }
+            }
+          } else {
+            // send to peer
+//            std::cout << myid << " send to : " << peer << std::endl;
+            RMPI_Send((void*)sendbuf, count, RMPI_ADOUBLE, peer, 0, comm);
+          }
+        }
+      }
+      d = d + 1;
+      p = p * 2;
+    }
+    if (myid == 0) {
+      adouble* r_buf = (adouble*)recvbuf;
+      for(int i=0; i < count; i++) {
+        r_buf[i] = s_buf[i];
+      }
+    }
+//    delete t_buf;  
+  } else {
+    rc = MPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
+  }
+  return rc;
+}
 #endif // ENABLE_GENERIC_MPI
