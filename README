@@ -33,7 +33,7 @@ int edge_hess(
 2.3: Run "automake"
 2.4: Configure the ADOL-C with "./configure --prefix=$ADOLCHOME --enable-sparse --with-colpack=$ColPackHOME --enable-addexa"
 2.5: Run "make;make install"
-2.6: Check your installation: go to "./ADOL-C/examples/additional_examples", check if "sparse_jacobian" and "sparse_hessian" are functional. 
+2.6: Check your installation: go to "./ADOL-C/examples/additional_examples/sparse", check if "sparse_jacobian" and "sparse_hessian" are functional. 
 2.7: Note: computation hessian with preaccumulation is disabled with this configure.
 
 3. Install ADOL-C with LivarHAcc enabled
