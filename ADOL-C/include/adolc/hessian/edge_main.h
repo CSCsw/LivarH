@@ -8,6 +8,8 @@
 #define NULLLOC UINT_MAX
 #define MAX_TEMP_ARRAY_SIZE 1000
 
+#define EDGE_DEBUG
+
 class derivative_info{
   public:
     unsigned char opcode;

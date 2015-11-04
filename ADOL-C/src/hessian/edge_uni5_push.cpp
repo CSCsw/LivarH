@@ -650,7 +650,7 @@ void edge_pushing_pre_s(short           tnum,
 //edge_check_graph(graph);
 //edge_check_adjoints(Adjoints,10);
 #ifdef EDGE_DEBUG
-    printf("edge_stmt_cnt = %d\n", edge_stmt_cnt);
+    //printf("edge_stmt_cnt = %d\n", edge_stmt_cnt);
 #endif  // EDGE_DEBUG
 
     delete dinfo;

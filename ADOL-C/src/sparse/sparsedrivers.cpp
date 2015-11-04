@@ -12,13 +12,13 @@
  recipient's acceptance of the terms of the accompanying license file.  
   
 ----------------------------------------------------------------------------*/
+#include <sys/time.h>
 #include <adolc/sparse/sparsedrivers.h>
 #include "oplate.h"
 #include <adolc/adalloc.h>
 #include <adolc/interfaces.h>
 #include "taping_p.h"
 #include "dvlparms.h"
-
 #if defined(ADOLC_INTERNAL)
 #    if HAVE_CONFIG_H
 #        include "config.h"
@@ -446,6 +446,8 @@ int sparse_hess(
 )
 #if HAVE_LIBCOLPACK
 {
+    struct timeval tv1, tv2;
+    double time_elapsed = 0;
     int i, l;
     unsigned int j;
     SparseHessInfos sHinfos;
@@ -460,7 +462,7 @@ int sparse_hess(
 
     ADOLC_OPENMP_THREAD_NUMBER;
     ADOLC_OPENMP_GET_THREAD_NUMBER;
-
+    gettimeofday(&tv1, NULL);
     /* Generate sparsity pattern, determine nnz, allocate memory */
     if (repeat <= 0) {
         if (( options[0] < 0 ) || (options[0] > 3 ))
@@ -501,11 +503,13 @@ int sparse_hess(
         }
 
         *nnz = sHinfos.nnz_in;
-
+        gettimeofday(&tv2, NULL);
+        time_elapsed = (tv2.tv_sec - tv1.tv_sec) + (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
+        printf("Pattern: %10.5f\n", time_elapsed);
 	/* compute seed matrix => ColPack library */
 
 	Seed = NULL;
-
+        gettimeofday(&tv1, NULL);
 	g = new GraphColoringInterface(SRC_MEM_ADOLC, sHinfos.HP, indep);
 	hr = new HessianRecovery;
 
@@ -542,6 +546,11 @@ int sparse_hess(
 	tapeInfos=getTapeInfos(tag);
 	ADOLC_CURRENT_TAPE_INFOS.copy(*tapeInfos);
 
+        gettimeofday(&tv2, NULL);
+        time_elapsed = (tv2.tv_sec - tv1.tv_sec) + (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
+        printf("Seed: %10.5f\n", time_elapsed);
+        printf("Color: %d\n", sHinfos.p);
+
     }
     else
       {
@@ -572,6 +581,7 @@ int sparse_hess(
         return -3;
     }
 
+    gettimeofday(&tv1, NULL);
     if (repeat == -1)
       return ret_val;
 
@@ -610,13 +620,16 @@ int sparse_hess(
     myfree2(X);   
 
 
+    gettimeofday(&tv2, NULL);
+    time_elapsed = (tv2.tv_sec - tv1.tv_sec) + (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
+    printf("Compressed: %10.5f\n", time_elapsed);
     /* recover compressed Hessian => ColPack library */
 
 //      if (options[1] == 0)
 //        HessianRecovery::IndirectRecover_CoordinateFormat(g, sHinfos.Hcomp, sHinfos.HP, rind, cind, values);
 //      else
 //        HessianRecovery::DirectRecover_CoordinateFormat(g, sHinfos.Hcomp, sHinfos.HP, rind, cind, values);
- 
+    gettimeofday(&tv1, NULL); 
     if (*values != NULL && *rind != NULL && *cind != NULL) {
      // everything is preallocated, we assume correctly
      // call usermem versions
@@ -638,6 +651,9 @@ int sparse_hess(
      else
        hr->DirectRecover_CoordinateFormat_unmanaged(g, sHinfos.Hcomp, sHinfos.HP, rind, cind, values);
     }
+    gettimeofday(&tv2, NULL);
+    time_elapsed = (tv2.tv_sec - tv1.tv_sec) + (double)(tv2.tv_usec - tv1.tv_usec) / 1000000;
+    printf("Recovery: %10.5f\n", time_elapsed);
     return ret_val;
 
 }
